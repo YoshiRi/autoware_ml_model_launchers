@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+set -u
+
+camera_namespace="camera5"
+data_path="/opt/autoware/mlmodels"
+errors=0
+warnings=0
+
+usage() {
+  cat <<'EOF'
+Usage: check_environment [--camera CAMERA_NAMESPACE] [--data-path MODEL_ROOT]
+
+Check the runtime dependencies for all_single_camera_detection.launch.xml.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --camera)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        printf 'Missing value for --camera\n' >&2
+        exit 2
+      fi
+      camera_namespace="$2"
+      shift 2
+      ;;
+    --data-path)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        printf 'Missing value for --data-path\n' >&2
+        exit 2
+      fi
+      data_path="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'Unknown argument: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+ok() {
+  printf '[ OK ] %s\n' "$1"
+}
+
+warn() {
+  printf '[WARN] %s\n' "$1"
+  warnings=$((warnings + 1))
+}
+
+fail() {
+  printf '[FAIL] %s\n' "$1"
+  errors=$((errors + 1))
+}
+
+printf 'Autoware ML model launcher environment check\n'
+printf '  camera:    %s\n' "$camera_namespace"
+printf '  model root: %s\n\n' "$data_path"
+
+if command -v ros2 >/dev/null 2>&1; then
+  ok "ros2 is available"
+else
+  fail "ros2 is not available; source the ROS and Autoware workspaces"
+fi
+
+if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+  ok "NVIDIA GPU is available"
+else
+  fail "NVIDIA GPU is not available through nvidia-smi"
+fi
+
+required_packages=(
+  autoware_bytetrack
+  autoware_image_transport_decompressor
+  autoware_tensorrt_yolox
+  autoware_traffic_light_category_merger
+  autoware_traffic_light_classifier
+)
+
+if command -v ros2 >/dev/null 2>&1; then
+  for package in "${required_packages[@]}"; do
+    if ros2 pkg prefix "$package" >/dev/null 2>&1; then
+      ok "ROS package: $package"
+    else
+      fail "ROS package not found: $package"
+    fi
+  done
+fi
+
+required_models=(
+  "yolox/yolox-sPlus-T4-960x960-debris.onnx"
+  "yolox/label.txt"
+  "yolox/semseg_color_map.csv"
+  "traffic_light_detector/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx"
+  "traffic_light_detector/car_ped_tl_detector_labels.txt"
+  "traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx"
+  "traffic_light_classifier/ped_traffic_light_classifier_mobilenetv2_batch_6.onnx"
+  "traffic_light_classifier/lamp_labels.txt"
+  "traffic_light_classifier/lamp_labels_ped.txt"
+  "traffic_light_classifier/lamp_recognizer_ml.param.yaml"
+)
+
+for model in "${required_models[@]}"; do
+  if [[ -r "$data_path/$model" ]]; then
+    ok "model file: $model"
+  else
+    fail "model file missing or unreadable: $data_path/$model"
+  fi
+done
+
+input_topic="/sensing/camera/$camera_namespace/image_raw/compressed"
+if command -v ros2 >/dev/null 2>&1; then
+  topic_list="$(timeout 3 ros2 topic list 2>/dev/null || true)"
+  if grep -Fxq "$input_topic" <<<"$topic_list"; then
+    ok "input topic is available: $input_topic"
+  else
+    warn "input topic is not currently available: $input_topic"
+    printf '       Start the camera source or play the rosbag, then check again.\n'
+  fi
+fi
+
+printf '\nSummary: %d error(s), %d warning(s)\n' "$errors" "$warnings"
+if [[ "$errors" -ne 0 ]]; then
+  exit 1
+fi
