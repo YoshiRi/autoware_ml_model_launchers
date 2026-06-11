@@ -2,6 +2,33 @@
 
 Launchers and small helper nodes for validating Autoware ML models with recorded camera topics.
 
+## All single-camera detection
+
+Run generic YOLOX, ByteTrack, and traffic light recognition against one camera image stream.
+
+```bash
+ros2 launch autoware_ml_model_launchers all_single_camera_detection.launch.xml \
+  camera_namespace:=camera5
+```
+
+Useful switches:
+
+- `use_decompress:=true`: subscribe to `/sensing/camera/<camera>/image_raw/compressed` and publish raw images once for all ML nodes
+- `enable_yolox:=true`: run generic YOLOX object detection
+- `enable_bytetrack:=true`: run ByteTrack from the generic YOLOX ROIs
+- `enable_tlr:=true`: run traffic light detection
+- `enable_tlr_classification:=true`: run traffic light classification and category merge
+- `data_path:=/opt/autoware/mlmodels`: root directory for model files
+- `build_only:=true`: build TensorRT engines and exit the TensorRT-backed nodes
+
+Default outputs:
+
+- YOLOX ROI output: `/perception/object_recognition/detection/camera5/rois`
+- ByteTrack output: `/perception/object_recognition/detection/camera5/tracked/rois`
+- TLR YOLOX objects: `/perception/traffic_light_recognition/camera5/detection/yolox/objects`
+- TLR ROIs: `/perception/traffic_light_recognition/camera5/detection/rois`
+- TLR final traffic signals: `/perception/traffic_light_recognition/camera5/classification/traffic_signals`
+
 ## YOLOX object detection
 
 ```bash

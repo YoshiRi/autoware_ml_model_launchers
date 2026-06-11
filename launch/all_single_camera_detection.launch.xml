@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="namespace" default="camera5" description="Deprecated alias for camera_namespace"/>
+  <arg name="camera_namespace" default="$(var namespace)" description="Camera namespace under /sensing/camera"/>
+  <arg name="node_namespace" default="perception/$(var camera_namespace)" description="ROS namespace for launched nodes"/>
+
+  <arg name="use_decompress" default="true" description="decompress the input image once before running ML nodes"/>
+  <arg name="use_sim_time" default="true" description="use simulation clock"/>
+  <arg name="build_only" default="false" description="exit TensorRT nodes after engines are built"/>
+
+  <arg name="enable_yolox" default="true" description="launch generic YOLOX object detection"/>
+  <arg name="enable_bytetrack" default="true" description="launch ByteTrack with generic YOLOX"/>
+  <arg name="enable_bytetrack_visualizer" default="true" description="launch ByteTrack visualizer"/>
+  <arg name="enable_tlr" default="true" description="launch traffic light detection and classification"/>
+  <arg name="enable_tlr_classification" default="true" description="launch traffic light classifiers"/>
+
+  <!-- Shared input and model root args -->
+  <arg name="input/image" default="/sensing/camera/$(var camera_namespace)/image_raw"/>
+  <arg name="data_path" default="/opt/autoware/mlmodels" description="autoware ML model root path"/>
+  <arg name="decompressor_param_path" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
+
+  <!-- Generic YOLOX model args -->
+  <arg name="object_yolox_model_folder_name" default="yolox" description="generic YOLOX model folder name"/>
+  <arg name="object_yolox_model_name" default="yolox-sPlus-T4-960x960-debris.onnx" description="generic YOLOX model file"/>
+  <arg name="object_yolox_model_path" default="$(var data_path)/$(var object_yolox_model_folder_name)/$(var object_yolox_model_name)" description="generic YOLOX model path"/>
+  <arg name="object_yolox_label_path" default="$(var data_path)/$(var object_yolox_model_folder_name)/label.txt" description="generic YOLOX label path"/>
+  <arg name="object_yolox_semantic_segmentation_color_map_path" default="$(var data_path)/$(var object_yolox_model_folder_name)/semseg_color_map.csv" description="generic YOLOX color map path"/>
+
+  <!-- Generic YOLOX output topic args -->
+  <arg name="object_yolox_output_objects" default="/perception/object_recognition/detection/$(var camera_namespace)/rois"/>
+  <arg name="object_yolox_output_mask" default="/perception/object_recognition/detection/$(var camera_namespace)/mask"/>
+  <arg name="object_yolox_output_tracked_objects" default="/perception/object_recognition/detection/$(var camera_namespace)/tracked/rois"/>
+
+  <!-- Traffic light detector model args -->
+  <arg name="tlr_yolox_model_folder_name" default="traffic_light_detector" description="traffic light YOLOX detector model folder name"/>
+  <arg name="tlr_classifier_model_folder_name" default="traffic_light_classifier" description="traffic light classifier model folder name"/>
+  <arg name="tlr_yolox_model_name" default="yolox_s_car_ped_tl_detector_960_960_batch_1.onnx" description="traffic light YOLOX detector model file"/>
+  <arg name="tlr_yolox_model_path" default="$(var data_path)/$(var tlr_yolox_model_folder_name)/$(var tlr_yolox_model_name)" description="traffic light YOLOX detector model path"/>
+  <arg name="tlr_yolox_label_path" default="$(var data_path)/$(var tlr_yolox_model_folder_name)/car_ped_tl_detector_labels.txt" description="traffic light YOLOX detector label path"/>
+  <arg name="tlr_yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_traffic_light_detector.param.yaml" description="traffic light YOLOX detector param path"/>
+  <arg name="tlr_yolox_roi_remap_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/traffic_light_roi_label_remap.csv" description="traffic light YOLOX ROI label remap path"/>
+
+  <!-- Traffic light classifier model args -->
+  <arg name="car_classifier_model_name" default="traffic_light_classifier_mobilenetv2_batch_6.onnx" description="car traffic light classifier model file"/>
+  <arg name="car_classifier_model_path" default="$(var data_path)/$(var tlr_classifier_model_folder_name)/$(var car_classifier_model_name)" description="car traffic light classifier model path"/>
+  <arg name="car_classifier_label_path" default="$(var data_path)/$(var tlr_classifier_model_folder_name)/lamp_labels.txt" description="car traffic light classifier label path"/>
+  <arg name="car_classifier_param_path" default="$(find-pkg-share autoware_traffic_light_classifier)/config/car_traffic_light_classifier.param.yaml" description="car traffic light classifier param path"/>
+  <arg name="car_classifier_type" default="1" description="0=HSVFilter, 1=CNN, 2=LampRecognizer"/>
+  <arg name="lamp_recognizer_ml_param_path" default="$(var data_path)/$(var tlr_classifier_model_folder_name)/lamp_recognizer_ml.param.yaml" description="lamp recognizer ML param path"/>
+
+  <arg name="pedestrian_classifier_model_name" default="ped_traffic_light_classifier_mobilenetv2_batch_6.onnx" description="pedestrian traffic light classifier model file"/>
+  <arg name="pedestrian_classifier_model_path" default="$(var data_path)/$(var tlr_classifier_model_folder_name)/$(var pedestrian_classifier_model_name)" description="pedestrian traffic light classifier model path"/>
+  <arg name="pedestrian_classifier_label_path" default="$(var data_path)/$(var tlr_classifier_model_folder_name)/lamp_labels_ped.txt" description="pedestrian traffic light classifier label path"/>
+  <arg name="pedestrian_classifier_param_path" default="$(find-pkg-share autoware_traffic_light_classifier)/config/pedestrian_traffic_light_classifier.param.yaml" description="pedestrian traffic light classifier param path"/>
+  <arg name="pedestrian_classifier_type" default="1" description="0=HSVFilter, 1=CNN, 2=LampRecognizer"/>
+
+  <!-- Traffic light output topic args -->
+  <arg name="tlr_output_detected_objects" default="/perception/traffic_light_recognition/$(var camera_namespace)/detection/yolox/objects"/>
+  <arg name="tlr_output_rois" default="/perception/traffic_light_recognition/$(var camera_namespace)/detection/rois"/>
+  <arg name="tlr_output_car_traffic_signals" default="/perception/traffic_light_recognition/$(var camera_namespace)/classification/car/traffic_signals"/>
+  <arg name="tlr_output_pedestrian_traffic_signals" default="/perception/traffic_light_recognition/$(var camera_namespace)/classification/pedestrian/traffic_signals"/>
+  <arg name="tlr_output_traffic_signals" default="/perception/traffic_light_recognition/$(var camera_namespace)/classification/traffic_signals"/>
+  <arg name="tlr_output_debug_image" default="/perception/traffic_light_recognition/$(var camera_namespace)/detection/yolox/debug/image"/>
+
+  <group>
+    <push-ros-namespace namespace="$(var node_namespace)"/>
+
+    <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="single_camera_image_transport_decompressor_node" if="$(var use_decompress)">
+      <remap from="~/input/compressed_image" to="$(var input/image)/compressed"/>
+      <remap from="~/output/raw_image" to="$(var input/image)"/>
+      <param from="$(var decompressor_param_path)"/>
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+  </group>
+
+  <group if="$(var enable_yolox)">
+    <include file="$(find-pkg-share autoware_ml_model_launchers)/launch/yolox_camera.launch.xml">
+      <arg name="camera_namespace" value="$(var camera_namespace)"/>
+      <arg name="node_namespace" value="$(var node_namespace)"/>
+      <arg name="use_decompress" value="false"/>
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="build_only" value="$(var build_only)"/>
+      <arg name="enable_bytetrack" value="$(var enable_bytetrack)"/>
+      <arg name="enable_bytetrack_visualizer" value="$(var enable_bytetrack_visualizer)"/>
+      <arg name="input/image" value="$(var input/image)"/>
+      <arg name="data_path" value="$(var data_path)"/>
+      <arg name="model_folder_name" value="$(var object_yolox_model_folder_name)"/>
+      <arg name="model_name" value="$(var object_yolox_model_name)"/>
+      <arg name="model_path" value="$(var object_yolox_model_path)"/>
+      <arg name="label_path" value="$(var object_yolox_label_path)"/>
+      <arg name="semantic_segmentation_color_map_path" value="$(var object_yolox_semantic_segmentation_color_map_path)"/>
+      <arg name="output/objects" value="$(var object_yolox_output_objects)"/>
+      <arg name="output/mask" value="$(var object_yolox_output_mask)"/>
+      <arg name="output/tracked_objects" value="$(var object_yolox_output_tracked_objects)"/>
+    </include>
+  </group>
+
+  <group if="$(var enable_tlr)">
+    <include file="$(find-pkg-share autoware_ml_model_launchers)/launch/tlr_detect_and_classifier.launch.xml">
+      <arg name="camera_namespace" value="$(var camera_namespace)"/>
+      <arg name="node_namespace" value="$(var node_namespace)"/>
+      <arg name="use_decompress" value="false"/>
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="build_only" value="$(var build_only)"/>
+      <arg name="enable_classification" value="$(var enable_tlr_classification)"/>
+      <arg name="input/image" value="$(var input/image)"/>
+      <arg name="data_path" value="$(var data_path)"/>
+      <arg name="yolox_model_folder_name" value="$(var tlr_yolox_model_folder_name)"/>
+      <arg name="classifier_model_folder_name" value="$(var tlr_classifier_model_folder_name)"/>
+      <arg name="yolox_model_name" value="$(var tlr_yolox_model_name)"/>
+      <arg name="yolox_model_path" value="$(var tlr_yolox_model_path)"/>
+      <arg name="yolox_label_path" value="$(var tlr_yolox_label_path)"/>
+      <arg name="yolox_param_path" value="$(var tlr_yolox_param_path)"/>
+      <arg name="yolox_roi_remap_path" value="$(var tlr_yolox_roi_remap_path)"/>
+      <arg name="car_classifier_model_name" value="$(var car_classifier_model_name)"/>
+      <arg name="car_classifier_model_path" value="$(var car_classifier_model_path)"/>
+      <arg name="car_classifier_label_path" value="$(var car_classifier_label_path)"/>
+      <arg name="car_classifier_param_path" value="$(var car_classifier_param_path)"/>
+      <arg name="car_classifier_type" value="$(var car_classifier_type)"/>
+      <arg name="lamp_recognizer_ml_param_path" value="$(var lamp_recognizer_ml_param_path)"/>
+      <arg name="pedestrian_classifier_model_name" value="$(var pedestrian_classifier_model_name)"/>
+      <arg name="pedestrian_classifier_model_path" value="$(var pedestrian_classifier_model_path)"/>
+      <arg name="pedestrian_classifier_label_path" value="$(var pedestrian_classifier_label_path)"/>
+      <arg name="pedestrian_classifier_param_path" value="$(var pedestrian_classifier_param_path)"/>
+      <arg name="pedestrian_classifier_type" value="$(var pedestrian_classifier_type)"/>
+      <arg name="output/detected_objects" value="$(var tlr_output_detected_objects)"/>
+      <arg name="output/rois" value="$(var tlr_output_rois)"/>
+      <arg name="output/car/traffic_signals" value="$(var tlr_output_car_traffic_signals)"/>
+      <arg name="output/pedestrian/traffic_signals" value="$(var tlr_output_pedestrian_traffic_signals)"/>
+      <arg name="output/traffic_signals" value="$(var tlr_output_traffic_signals)"/>
+      <arg name="output/debug/image" value="$(var tlr_output_debug_image)"/>
+    </include>
+  </group>
+</launch>
