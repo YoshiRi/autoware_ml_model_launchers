@@ -4,19 +4,29 @@ set -u
 
 camera_namespace="camera5"
 data_path="/opt/autoware/mlmodels"
+pipeline="camera"
 errors=0
 warnings=0
 
 usage() {
   cat <<'EOF'
-Usage: check_environment [--camera CAMERA_NAMESPACE] [--data-path MODEL_ROOT]
+Usage: check_environment [--pipeline PIPELINE] [--camera CAMERA_NAMESPACE]
+                         [--data-path MODEL_ROOT]
 
-Check the runtime dependencies for all_single_camera_detection.launch.xml.
+PIPELINE is one of: camera, bevfusion, ptv3, centerpoint, streampetr.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --pipeline)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        printf 'Missing value for --pipeline\n' >&2
+        exit 2
+      fi
+      pipeline="$2"
+      shift 2
+      ;;
     --camera)
       if [[ $# -lt 2 || -z "$2" ]]; then
         printf 'Missing value for --camera\n' >&2
@@ -45,6 +55,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+case "$pipeline" in
+  camera|bevfusion|ptv3|centerpoint|streampetr)
+    ;;
+  *)
+    printf 'Unknown pipeline: %s\n' "$pipeline" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
 ok() {
   printf '[ OK ] %s\n' "$1"
 }
@@ -60,6 +80,7 @@ fail() {
 }
 
 printf 'Autoware ML model launcher environment check\n'
+printf '  pipeline:  %s\n' "$pipeline"
 printf '  camera:    %s\n' "$camera_namespace"
 printf '  model root: %s\n\n' "$data_path"
 
@@ -75,13 +96,77 @@ else
   fail "NVIDIA GPU is not available through nvidia-smi"
 fi
 
-required_packages=(
-  autoware_bytetrack
-  autoware_image_transport_decompressor
-  autoware_tensorrt_yolox
-  autoware_traffic_light_category_merger
-  autoware_traffic_light_classifier
-)
+case "$pipeline" in
+  camera)
+    required_packages=(
+      autoware_bytetrack
+      autoware_image_transport_decompressor
+      autoware_tensorrt_yolox
+      autoware_traffic_light_category_merger
+      autoware_traffic_light_classifier
+    )
+    required_models=(
+      "yolox/yolox-sPlus-T4-960x960-debris.onnx"
+      "yolox/label.txt"
+      "yolox/semseg_color_map.csv"
+      "traffic_light_detector/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx"
+      "traffic_light_detector/car_ped_tl_detector_labels.txt"
+      "traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx"
+      "traffic_light_classifier/ped_traffic_light_classifier_mobilenetv2_batch_6.onnx"
+      "traffic_light_classifier/lamp_labels.txt"
+      "traffic_light_classifier/lamp_labels_ped.txt"
+      "traffic_light_classifier/lamp_recognizer_ml.param.yaml"
+    )
+    input_topics=("/sensing/camera/$camera_namespace/image_raw/compressed")
+    ;;
+  bevfusion)
+    required_packages=(autoware_bevfusion)
+    required_models=(
+      "bevfusion_lidar/bevfusion_lidar.onnx"
+      "bevfusion_lidar/bevfusion_lidar.param.yaml"
+      "bevfusion_lidar/ml_package_bevfusion_lidar.param.yaml"
+      "bevfusion_lidar/detection_class_remapper.param.yaml"
+    )
+    input_topics=("/sensing/lidar/concatenated/pointcloud")
+    ;;
+  ptv3)
+    required_packages=(autoware_ptv3)
+    required_models=(
+      "ptv3/ptv3.onnx"
+      "ptv3/ml_package_ptv3.param.yaml"
+    )
+    input_topics=("/sensing/lidar/concatenated/pointcloud")
+    ;;
+  centerpoint)
+    required_packages=(autoware_lidar_centerpoint)
+    required_models=(
+      "lidar_centerpoint/centerpoint_tiny_ml_package.param.yaml"
+      "lidar_centerpoint/detection_class_remapper.param.yaml"
+    )
+    input_topics=("/sensing/lidar/concatenated/pointcloud")
+    ;;
+  streampetr)
+    required_packages=(autoware_camera_streampetr)
+    required_models=(
+      "streampetr/simplify_extract_img_feat.onnx"
+      "streampetr/simplify_pts_head_memory.onnx"
+      "streampetr/simplify_position_embedding.onnx"
+      "streampetr/tensorrt_stream_petr.param.yaml"
+    )
+    input_topics=(
+      "/sensing/camera/camera8/image_raw/compressed"
+      "/sensing/camera/camera8/camera_info"
+      "/sensing/camera/camera6/image_raw/compressed"
+      "/sensing/camera/camera6/camera_info"
+      "/sensing/camera/camera10/image_raw/compressed"
+      "/sensing/camera/camera10/camera_info"
+      "/sensing/camera/camera7/image_raw/compressed"
+      "/sensing/camera/camera7/camera_info"
+      "/sensing/camera/camera9/image_raw/compressed"
+      "/sensing/camera/camera9/camera_info"
+    )
+    ;;
+esac
 
 if command -v ros2 >/dev/null 2>&1; then
   for package in "${required_packages[@]}"; do
@@ -93,19 +178,6 @@ if command -v ros2 >/dev/null 2>&1; then
   done
 fi
 
-required_models=(
-  "yolox/yolox-sPlus-T4-960x960-debris.onnx"
-  "yolox/label.txt"
-  "yolox/semseg_color_map.csv"
-  "traffic_light_detector/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx"
-  "traffic_light_detector/car_ped_tl_detector_labels.txt"
-  "traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx"
-  "traffic_light_classifier/ped_traffic_light_classifier_mobilenetv2_batch_6.onnx"
-  "traffic_light_classifier/lamp_labels.txt"
-  "traffic_light_classifier/lamp_labels_ped.txt"
-  "traffic_light_classifier/lamp_recognizer_ml.param.yaml"
-)
-
 for model in "${required_models[@]}"; do
   if [[ -r "$data_path/$model" ]]; then
     ok "model file: $model"
@@ -114,14 +186,17 @@ for model in "${required_models[@]}"; do
   fi
 done
 
-input_topic="/sensing/camera/$camera_namespace/image_raw/compressed"
 if command -v ros2 >/dev/null 2>&1; then
   topic_list="$(timeout 3 ros2 topic list 2>/dev/null || true)"
-  if grep -Fxq "$input_topic" <<<"$topic_list"; then
-    ok "input topic is available: $input_topic"
-  else
-    warn "input topic is not currently available: $input_topic"
-    printf '       Start the camera source or play the rosbag, then check again.\n'
+  for input_topic in "${input_topics[@]}"; do
+    if grep -Fxq "$input_topic" <<<"$topic_list"; then
+      ok "input topic is available: $input_topic"
+    else
+      warn "input topic is not currently available: $input_topic"
+    fi
+  done
+  if [[ "$warnings" -ne 0 ]]; then
+    printf '       Start the sensor source or play the rosbag, then check again.\n'
   fi
 fi
 

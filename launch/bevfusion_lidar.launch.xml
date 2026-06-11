@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
+  <arg name="output/objects" default="/perception/object_recognition/detection/bevfusion/objects"/>
+  <arg name="data_path" default="/opt/autoware/mlmodels"/>
+  <arg name="model_path" default="$(var data_path)/bevfusion_lidar"/>
+  <arg name="build_only" default="false"/>
+  <arg name="log_level" default="info"/>
+
+  <include file="$(find-pkg-share autoware_bevfusion)/launch/bevfusion.launch.xml">
+    <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+    <arg name="output/objects" value="$(var output/objects)"/>
+    <arg name="model_name" value="bevfusion_lidar"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="model_param_path" value="$(var model_path)/bevfusion_lidar.param.yaml"/>
+    <arg name="ml_package_param_path" value="$(var model_path)/ml_package_bevfusion_lidar.param.yaml"/>
+    <arg name="class_remapper_param_path" value="$(var model_path)/detection_class_remapper.param.yaml"/>
+    <arg name="build_only" value="$(var build_only)"/>
+    <arg name="log_level" value="$(var log_level)"/>
+  </include>
+</launch>

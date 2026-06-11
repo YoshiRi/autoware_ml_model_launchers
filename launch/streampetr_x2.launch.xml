@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="build_only" default="false" description="shutdown after TensorRT engines are built"/>
+  <arg name="debug_mode" default="true"/>
+  <arg name="data_path" default="/opt/autoware/mlmodels"/>
+  <arg name="model_path" default="$(var data_path)/streampetr"/>
+  <arg name="param_path" default="$(var model_path)/tensorrt_stream_petr.param.yaml"/>
+  <arg name="node_param_path" default="$(find-pkg-share autoware_ml_model_launchers)/config/streampetr_node.param.yaml"/>
+
+  <!-- Model order: CAM_FRONT, CAM_FRONT_LEFT, CAM_BACK_LEFT, CAM_FRONT_RIGHT, CAM_BACK_RIGHT -->
+  <arg name="camera0_namespace" default="camera8" description="CAM_FRONT"/>
+  <arg name="camera1_namespace" default="camera6" description="CAM_FRONT_LEFT"/>
+  <arg name="camera2_namespace" default="camera10" description="CAM_BACK_LEFT"/>
+  <arg name="camera3_namespace" default="camera7" description="CAM_FRONT_RIGHT"/>
+  <arg name="camera4_namespace" default="camera9" description="CAM_BACK_RIGHT"/>
+
+  <arg name="output/objects" default="/perception/object_recognition/detection/streampetr/objects"/>
+  <arg name="anchor_camera_id" default="0"/>
+  <arg name="is_compressed_image" default="true"/>
+  <arg name="is_distorted_image" default="true"/>
+  <arg name="multithreading" default="false"/>
+  <arg name="downsample_factor" default="1.0"/>
+  <arg name="max_camera_time_diff" default="0.2"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <node
+    pkg="autoware_camera_streampetr"
+    exec="autoware_camera_streampetr_node"
+    name="stream_petr"
+    namespace="/perception"
+    output="screen"
+  >
+    <param from="$(var node_param_path)" allow_substs="true"/>
+    <param from="$(var param_path)" allow_substs="true"/>
+    <param name="build_only" value="$(var build_only)"/>
+    <param name="debug_mode" value="$(var debug_mode)"/>
+    <param name="model_params.backbone_path" value="$(var model_path)/simplify_extract_img_feat.onnx"/>
+    <param name="model_params.head_path" value="$(var model_path)/simplify_pts_head_memory.onnx"/>
+    <param name="model_params.position_embedding_path" value="$(var model_path)/simplify_position_embedding.onnx"/>
+    <param name="model_params.pre_memory_length" value="1024"/>
+    <param name="model_params.post_memory_length" value="1280"/>
+    <param name="anchor_camera_id" value="$(var anchor_camera_id)"/>
+    <param name="is_compressed_image" value="$(var is_compressed_image)"/>
+    <param name="is_distorted_image" value="$(var is_distorted_image)"/>
+    <param name="multithreading" value="$(var multithreading)"/>
+    <param name="downsample_factor" value="$(var downsample_factor)"/>
+    <param name="max_camera_time_diff" value="$(var max_camera_time_diff)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+
+    <remap from="~/output/objects" to="$(var output/objects)"/>
+    <remap from="~/latency/preprocess" to="/perception/object_recognition/detection/streampetr/latency/preprocess"/>
+    <remap from="~/latency/total" to="/perception/object_recognition/detection/streampetr/latency/total"/>
+    <remap from="~/latency/inference" to="/perception/object_recognition/detection/streampetr/latency/inference"/>
+
+    <remap from="~/input/camera0/camera_info" to="/sensing/camera/$(var camera0_namespace)/camera_info"/>
+    <remap from="~/input/camera1/camera_info" to="/sensing/camera/$(var camera1_namespace)/camera_info"/>
+    <remap from="~/input/camera2/camera_info" to="/sensing/camera/$(var camera2_namespace)/camera_info"/>
+    <remap from="~/input/camera3/camera_info" to="/sensing/camera/$(var camera3_namespace)/camera_info"/>
+    <remap from="~/input/camera4/camera_info" to="/sensing/camera/$(var camera4_namespace)/camera_info"/>
+
+    <remap from="~/input/camera0/image" to="/sensing/camera/$(var camera0_namespace)/image_raw"/>
+    <remap from="~/input/camera1/image" to="/sensing/camera/$(var camera1_namespace)/image_raw"/>
+    <remap from="~/input/camera2/image" to="/sensing/camera/$(var camera2_namespace)/image_raw"/>
+    <remap from="~/input/camera3/image" to="/sensing/camera/$(var camera3_namespace)/image_raw"/>
+    <remap from="~/input/camera4/image" to="/sensing/camera/$(var camera4_namespace)/image_raw"/>
+
+    <remap from="~/input/camera0/image/compressed" to="/sensing/camera/$(var camera0_namespace)/image_raw/compressed"/>
+    <remap from="~/input/camera1/image/compressed" to="/sensing/camera/$(var camera1_namespace)/image_raw/compressed"/>
+    <remap from="~/input/camera2/image/compressed" to="/sensing/camera/$(var camera2_namespace)/image_raw/compressed"/>
+    <remap from="~/input/camera3/image/compressed" to="/sensing/camera/$(var camera3_namespace)/image_raw/compressed"/>
+    <remap from="~/input/camera4/image/compressed" to="/sensing/camera/$(var camera4_namespace)/image_raw/compressed"/>
+  </node>
+</launch>

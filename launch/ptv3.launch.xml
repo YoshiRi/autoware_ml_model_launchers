@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
+  <arg name="output/segmentation" default="/perception/segmentation/ptv3/segmentation"/>
+  <arg name="output/visualization" default="/perception/segmentation/ptv3/visualization"/>
+  <arg name="output/filtered" default="/perception/segmentation/ptv3/filtered"/>
+  <arg name="data_path" default="/opt/autoware/mlmodels"/>
+  <arg name="model_path" default="$(var data_path)/ptv3"/>
+  <arg name="build_only" default="false"/>
+  <arg name="log_level" default="info"/>
+
+  <include file="$(find-pkg-share autoware_ptv3)/launch/ptv3.launch.xml">
+    <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+    <arg name="output/pointcloud/segmentation" value="$(var output/segmentation)"/>
+    <arg name="output/pointcloud/visualization" value="$(var output/visualization)"/>
+    <arg name="output/pointcloud/filtered" value="$(var output/filtered)"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="ml_package_param_path" value="$(var model_path)/ml_package_ptv3.param.yaml"/>
+    <arg name="build_only" value="$(var build_only)"/>
+    <arg name="log_level" value="$(var log_level)"/>
+  </include>
+</launch>

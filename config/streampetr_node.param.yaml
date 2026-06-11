@@ -1,0 +1,25 @@
+/**:
+  ros__parameters:
+    debug_mode: true
+    max_camera_time_diff: 0.2
+    multithreading: false
+    anchor_camera_id: 0
+    is_compressed_image: true
+    is_distorted_image: true
+
+    model_params:
+      trt_precision: "fp16"
+      use_temporal: true
+      backbone_engine_path: ""
+      head_engine_path: ""
+      position_embedding_engine_path: ""
+      workspace_size: 32
+      pre_memory_length: 1024
+      post_memory_length: 1280
+
+    post_process_params:
+      confidence_threshold: [0.36, 0.39, 0.38, 0.41, 0.43]
+      circle_nms_dist_threshold: 0.0
+      iou_nms_search_distance_2d: 10.0
+      iou_nms_threshold: 0.5
+      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]

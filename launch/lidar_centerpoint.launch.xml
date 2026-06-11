@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
+  <arg name="output/objects" default="/perception/object_recognition/detection/centerpoint/objects"/>
+  <arg name="data_path" default="/opt/autoware/mlmodels"/>
+  <arg name="model_name" default="centerpoint_tiny"/>
+  <arg name="model_path" default="$(var data_path)/lidar_centerpoint"/>
+  <arg name="build_only" default="false"/>
+
+  <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
+    <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+    <arg name="output/objects" value="$(var output/objects)"/>
+    <arg name="model_name" value="$(var model_name)"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="ml_package_param_path" value="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
+    <arg name="class_remapper_param_path" value="$(var model_path)/detection_class_remapper.param.yaml"/>
+    <arg name="build_only" value="$(var build_only)"/>
+  </include>
+</launch>

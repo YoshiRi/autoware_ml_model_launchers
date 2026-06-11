@@ -65,13 +65,15 @@ ros2 run autoware_ml_model_launchers check_environment --camera camera5
 
 It checks the GPU, required ROS packages, model files, and input topic. A missing input topic is
 reported as a warning because the check may be run before rosbag playback starts. To use another
-model root:
+pipeline or model root:
 
 ```bash
 ros2 run autoware_ml_model_launchers check_environment \
-  --camera camera5 \
+  --pipeline ptv3 \
   --data-path /path/to/mlmodels
 ```
+
+Available pipelines are `camera`, `bevfusion`, `ptv3`, `centerpoint`, and `streampetr`.
 
 The default model tree must contain:
 
@@ -158,3 +160,111 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
 
 `node_namespace` defaults to `perception/<camera_namespace>`. `camera_namespace` controls the
 `/sensing/camera/<camera_namespace>` input path and per-camera output topic names.
+
+## LiDAR model launchers
+
+The following launchers use `/sensing/lidar/concatenated/pointcloud` by default. Override
+`input/pointcloud` when the rosbag uses another topic.
+
+### BEVFusion LiDAR
+
+```bash
+ros2 run autoware_ml_model_launchers check_environment --pipeline bevfusion
+ros2 launch autoware_ml_model_launchers bevfusion_lidar.launch.xml
+```
+
+Output:
+
+```text
+/perception/object_recognition/detection/bevfusion/objects
+```
+
+The default model directory is `/opt/autoware/mlmodels/bevfusion_lidar`. To build the TensorRT
+engine and exit:
+
+```bash
+ros2 launch autoware_ml_model_launchers bevfusion_lidar.launch.xml build_only:=true
+```
+
+### PTv3
+
+```bash
+ros2 run autoware_ml_model_launchers check_environment --pipeline ptv3
+ros2 launch autoware_ml_model_launchers ptv3.launch.xml
+```
+
+Outputs:
+
+- Segmentation: `/perception/segmentation/ptv3/segmentation`
+- Colored visualization cloud: `/perception/segmentation/ptv3/visualization`
+- Filtered cloud: `/perception/segmentation/ptv3/filtered`
+
+The default model directory is `/opt/autoware/mlmodels/ptv3`.
+
+### CenterPoint
+
+```bash
+ros2 run autoware_ml_model_launchers check_environment --pipeline centerpoint
+ros2 launch autoware_ml_model_launchers lidar_centerpoint.launch.xml
+```
+
+The default model is `centerpoint_tiny` under
+`/opt/autoware/mlmodels/lidar_centerpoint`. The model was not installed in the environment used
+to develop these launchers, so only launch-file expansion was tested. Run the environment check
+before attempting inference.
+
+## StreamPETR for X2
+
+`streampetr_x2.launch.xml` captures the known X2 camera mapping. It is intentionally vehicle
+specific because the input order must match the order used during training:
+
+| Model input | Direction | X2 camera |
+| --- | --- | --- |
+| camera0 | front | camera8 |
+| camera1 | front-left | camera6 |
+| camera2 | back-left | camera10 |
+| camera3 | front-right | camera7 |
+| camera4 | back-right | camera9 |
+
+Check the model and expected topics, then launch:
+
+```bash
+ros2 run autoware_ml_model_launchers check_environment --pipeline streampetr
+ros2 launch autoware_ml_model_launchers streampetr_x2.launch.xml
+```
+
+The launcher defaults to compressed, distorted images and models under
+`/opt/autoware/mlmodels/streampetr`. It also requires matching `CameraInfo`, camera-to-base TF,
+and map-to-base TF. All five images must arrive within `max_camera_time_diff:=0.2`.
+
+The first launch builds three TensorRT engines and may take several minutes. Build them before
+starting rosbag playback:
+
+```bash
+ros2 launch autoware_ml_model_launchers streampetr_x2.launch.xml build_only:=true
+```
+
+TensorRT engine building may not respond immediately to `Ctrl-C`; allow it to finish when possible.
+
+The camera namespace arguments can be changed, but changing only topic names does not guarantee
+that another vehicle has the camera order or calibration expected by the model.
+
+Output:
+
+```text
+/perception/object_recognition/detection/streampetr/objects
+```
+
+The X2 deployment may additionally pass this output through
+`autoware_object_sorter` to `/perception/object_recognition/detection/camera_only/objects`.
+That step is not included here because its parameter file belongs to the vehicle-specific launch
+configuration.
+
+## Model launcher status
+
+| Launcher | Model files found | Launch expansion | Inference |
+| --- | --- | --- | --- |
+| BEVFusion LiDAR | Yes | Tested | Model and engine load tested; rosbag inference not tested |
+| PTv3 | Yes | Tested | Model and engine load tested; rosbag inference not tested |
+| CenterPoint | No | Tested | Not tested |
+| StreamPETR X2 | Yes | Tested | Parameters and ONNX load tested; full engine build not completed |
