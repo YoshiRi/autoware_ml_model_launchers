@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+  push:
+    branches:
+      - dev
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up ROS
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+
+      - name: Install build and lint dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            libxml2-utils \
+            python3-colcon-common-extensions \
+            ros-humble-ament-cmake-python \
+            ros-humble-ament-cmake-flake8 \
+            ros-humble-ament-cmake-pep257
+
+      - name: Check formatting and syntax
+        shell: bash
+        run: |
+          git diff --check
+          bash -n scripts/check_environment
+          xmllint --noout package.xml launch/*.launch.xml
+
+      - name: Run Python lint
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          python3 -m ament_flake8.main \
+            --config setup.cfg \
+            autoware_ml_model_launchers setup.py
+          python3 -m ament_pep257.main autoware_ml_model_launchers
+
+      - name: Build package
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          mkdir -p /tmp/autoware_ml_model_launchers_ws/src
+          ln -s "$GITHUB_WORKSPACE" \
+            /tmp/autoware_ml_model_launchers_ws/src/autoware_ml_model_launchers
+          cd /tmp/autoware_ml_model_launchers_ws
+          colcon build \
+            --event-handlers console_direct+ \
+            --packages-select autoware_ml_model_launchers
+
+      - name: Run package tests
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          cd /tmp/autoware_ml_model_launchers_ws
+          colcon test \
+            --event-handlers console_direct+ \
+            --packages-select autoware_ml_model_launchers
+          colcon test-result --verbose

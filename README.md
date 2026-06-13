@@ -2,6 +2,13 @@
 
 Launchers and small helper nodes for validating Autoware ML models with recorded camera topics.
 
+## Development
+
+Development uses `dev` as the integration branch. Create `feature/*`, `fix/*`, `refactor/*`, or
+`docs/*` branches from the latest `dev` and open pull requests back into `dev`. Direct pushes to
+`main` are not part of the development workflow. See [`AGENTS.md`](AGENTS.md) for the complete
+branch policy and local validation commands.
+
 ## Setup
 
 Clone this repository into the `src` directory of an existing Autoware workspace:

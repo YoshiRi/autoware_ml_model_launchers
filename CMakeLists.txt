@@ -49,8 +49,15 @@ install(
 )
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_flake8 REQUIRED)
+  find_package(ament_cmake_pep257 REQUIRED)
+
+  ament_flake8(
+    CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/setup.cfg"
+    autoware_ml_model_launchers
+    setup.py
+  )
+  ament_pep257(autoware_ml_model_launchers)
 endif()
 
 ament_package()
