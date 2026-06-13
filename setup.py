@@ -10,7 +10,10 @@ setup(
     packages=[package_name],
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
-        (f"share/{package_name}", ["package.xml", "README.md"]),
+        (
+            f"share/{package_name}",
+            ["package.xml", "README.md", "requirements-open-yolo.txt"],
+        ),
         (f"share/{package_name}/launch", glob("launch/*.launch.xml")),
         (f"share/{package_name}/config", glob("config/*.yaml")),
         (f"lib/{package_name}", ["scripts/check_environment"]),
@@ -24,6 +27,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
+            "compressed_yolo_node = autoware_ml_model_launchers.compressed_yolo_node:main",
             "tlr_yolox_roi_adapter = autoware_ml_model_launchers.tlr_yolox_roi_adapter:main",
         ],
     },

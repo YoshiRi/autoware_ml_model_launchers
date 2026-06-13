@@ -73,7 +73,8 @@ ros2 run autoware_ml_model_launchers check_environment \
   --data-path /path/to/mlmodels
 ```
 
-Available pipelines are `camera`, `bevfusion`, `ptv3`, `centerpoint`, and `streampetr`.
+Available pipelines are `camera`, `open_yolo`, `bevfusion`, `ptv3`, `centerpoint`, and
+`streampetr`.
 
 The default model tree must contain:
 
@@ -135,7 +136,9 @@ and raw-message panels with these settings:
 | --- | --- |
 | Image (camera input) | `/sensing/camera/camera5/image_raw` |
 | Image (TLR debug) | `/perception/traffic_light_recognition/camera5/detection/yolox/debug/image` |
+| Image (Open YOLO debug) | `/perception/object_recognition/detection/open_yolo/camera5/debug/image` |
 | Raw messages (YOLOX ROIs) | `/perception/object_recognition/detection/camera5/rois` |
+| Raw messages (Open YOLO) | `/perception/object_recognition/detection/open_yolo/camera5/detections` |
 | Raw messages (tracked ROIs) | `/perception/object_recognition/detection/camera5/tracked/rois` |
 | Raw messages (traffic signals) | `/perception/traffic_light_recognition/camera5/classification/traffic_signals` |
 
@@ -160,6 +163,75 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
 
 `node_namespace` defaults to `perception/<camera_namespace>`. `camera_namespace` controls the
 `/sensing/camera/<camera_namespace>` input path and per-camera output topic names.
+
+## Open YOLO comparison
+
+`open_yolo.launch.xml` launches the included `compressed_yolo_node` for comparison with Autoware
+YOLOX. It consumes the same compressed camera stream but publishes the generic
+`vision_msgs/msg/Detection2DArray` format.
+
+The ROS node is included in this repository. The heavy Python runtime and model weights remain
+external. Ultralytics and its models also have separate license requirements; review
+[`docs/open_yolo_design.md`](docs/open_yolo_design.md) before redistribution or product use.
+
+Install the ROS dependency:
+
+```bash
+sudo apt install ros-${ROS_DISTRO}-vision-msgs python3-opencv python3-venv
+```
+
+Create an isolated Python environment from this repository:
+
+```bash
+python3 -m venv ~/venvs/open_yolo --system-site-packages
+source ~/venvs/open_yolo/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r \
+  "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-yolo.txt"
+```
+
+Build from the Autoware workspace root:
+
+```bash
+cd "${AUTOWARE_WS}"
+source /opt/ros/${ROS_DISTRO}/setup.bash
+colcon build --symlink-install --packages-select autoware_ml_model_launchers
+source install/setup.bash
+```
+
+Activate the virtual environment before checking or launching Open YOLO:
+
+```bash
+source ~/venvs/open_yolo/bin/activate
+
+ros2 run autoware_ml_model_launchers check_environment \
+  --pipeline open_yolo \
+  --camera camera5
+
+ros2 launch autoware_ml_model_launchers open_yolo.launch.xml camera_namespace:=camera5
+```
+
+The default `model:=yolo26s.pt` may be downloaded by Ultralytics on first launch. For offline or
+repeatable runs, download the weight in advance and pass an absolute path:
+
+```bash
+ros2 launch autoware_ml_model_launchers open_yolo.launch.xml \
+  camera_namespace:=camera5 \
+  model:=/path/to/yolo26s.pt
+```
+
+The launcher defaults to `imgsz:=960` to match the Autoware YOLOX input size. Override `imgsz` when
+comparing performance or when GPU memory and throughput are constrained.
+
+Default outputs:
+
+- Detections: `/perception/object_recognition/detection/open_yolo/camera5/detections`
+- Debug image: `/perception/object_recognition/detection/open_yolo/camera5/debug/image`
+- Predict time: `/perception/object_recognition/detection/open_yolo/camera5/latency/predict_ms`
+
+Open YOLO detections and Autoware YOLOX ROIs use different message types and class taxonomies.
+`predict_ms` measures the complete Ultralytics `model.predict()` call, including preprocessing and
+postprocessing, so it must not be compared directly with an inference-only TensorRT metric.
 
 ## LiDAR model launchers
 
@@ -268,3 +340,4 @@ configuration.
 | PTv3 | Yes | Tested | Model and engine load tested; rosbag inference not tested |
 | CenterPoint | No | Tested | Not tested |
 | StreamPETR X2 | Yes | Tested | Parameters and ONNX load tested; full engine build not completed |
+| Open YOLO | Auto-download or explicit path | Tested | GPU inference and ROS topic round-trip tested |

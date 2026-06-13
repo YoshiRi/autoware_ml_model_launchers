@@ -8,6 +8,13 @@ ament_python_install_package(${PROJECT_NAME})
 
 install(
   PROGRAMS
+    autoware_ml_model_launchers/compressed_yolo_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME compressed_yolo_node
+)
+
+install(
+  PROGRAMS
     autoware_ml_model_launchers/tlr_yolox_roi_adapter.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME tlr_yolox_roi_adapter
@@ -30,7 +37,14 @@ install(
 )
 
 install(
-  FILES README.md
+  DIRECTORY docs/
+  DESTINATION share/${PROJECT_NAME}/docs
+)
+
+install(
+  FILES
+    README.md
+    requirements-open-yolo.txt
   DESTINATION share/${PROJECT_NAME}
 )
 

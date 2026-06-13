@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="camera_namespace" default="camera5"/>
+  <arg name="input/image" default="/sensing/camera/$(var camera_namespace)/image_raw/compressed"/>
+  <arg name="output/detections" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/detections"/>
+  <arg name="output/debug_image" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/debug/image"/>
+  <arg name="output/debug_compressed" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/debug/image/compressed"/>
+  <arg name="output/predict_ms" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/latency/predict_ms"/>
+
+  <arg name="model" default="yolo26s.pt"/>
+  <arg name="device" default="0"/>
+  <arg name="imgsz" default="960"/>
+  <arg name="conf_thres" default="0.25"/>
+  <arg name="iou_thres" default="0.70"/>
+  <arg name="max_det" default="100"/>
+  <arg name="half" default="false"/>
+  <arg name="class_filter" default="person,bicycle,car,motorcycle,bus,truck,traffic light,stop sign"/>
+  <arg name="publish_debug_image" default="true"/>
+  <arg name="publish_debug_compressed" default="false"/>
+  <arg name="drop_if_busy" default="true"/>
+
+  <node
+    pkg="autoware_ml_model_launchers"
+    exec="compressed_yolo_node"
+    name="open_yolo_detector"
+    output="screen"
+  >
+    <param name="input_topic" value="$(var input/image)"/>
+    <param name="detections_topic" value="$(var output/detections)"/>
+    <param name="debug_image_topic" value="$(var output/debug_image)"/>
+    <param name="debug_compressed_topic" value="$(var output/debug_compressed)"/>
+    <param name="latency_topic" value="$(var output/predict_ms)"/>
+    <param name="model" value="$(var model)"/>
+    <param name="device" value="$(var device)"/>
+    <param name="imgsz" value="$(var imgsz)"/>
+    <param name="conf_thres" value="$(var conf_thres)"/>
+    <param name="iou_thres" value="$(var iou_thres)"/>
+    <param name="max_det" value="$(var max_det)"/>
+    <param name="half" value="$(var half)"/>
+    <param name="class_filter" value="$(var class_filter)"/>
+    <param name="publish_debug_image" value="$(var publish_debug_image)"/>
+    <param name="publish_debug_compressed" value="$(var publish_debug_compressed)"/>
+    <param name="drop_if_busy" value="$(var drop_if_busy)"/>
+  </node>
+</launch>
