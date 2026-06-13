@@ -36,7 +36,18 @@ jobs:
       - name: Check formatting and syntax
         shell: bash
         run: |
-          git diff --check
+          if grep -RIn \
+            --include='*.cfg' \
+            --include='*.md' \
+            --include='*.py' \
+            --include='*.sh' \
+            --include='*.txt' \
+            --include='*.xml' \
+            --include='*.yaml' \
+            '[[:blank:]]$' .; then
+            echo "Trailing whitespace found"
+            exit 1
+          fi
           bash -n scripts/check_environment
           xmllint --noout package.xml launch/*.launch.xml
 
