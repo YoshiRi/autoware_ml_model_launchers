@@ -47,10 +47,10 @@
     <param name="iou_thres" value="$(var iou_thres)"/>
     <param name="max_det" value="$(var max_det)"/>
     <param name="half" value="$(var half)"/>
-    <param name="backend_config_json" value="$(var backend_config_json)"/>
+    <param name="backend_config_json" value="$(var backend_config_json)" type="str"/>
     <param name="load_on_start" value="$(var load_on_start)"/>
     <param name="class_filter" value="$(var class_filter)"/>
-    <param name="label_map" value="$(var label_map)"/>
+    <param name="label_map" value="$(var label_map)" type="str"/>
     <param name="use_default_driving_label_map" value="$(var use_default_driving_label_map)"/>
     <param name="publish_debug_image" value="$(var publish_debug_image)"/>
     <param name="publish_debug_compressed" value="$(var publish_debug_compressed)"/>

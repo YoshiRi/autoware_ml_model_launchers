@@ -306,9 +306,15 @@ def main(args: Optional[List[str]] = None) -> None:
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        node.destroy_node()
+        try:
+            node.destroy_node()
+        except (KeyboardInterrupt, ExternalShutdownException):
+            pass
         if rclpy.ok():
-            rclpy.shutdown()
+            try:
+                rclpy.shutdown()
+            except (KeyboardInterrupt, ExternalShutdownException):
+                pass
 
 
 if __name__ == "__main__":
