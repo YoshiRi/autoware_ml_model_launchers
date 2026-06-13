@@ -218,6 +218,9 @@ python3 -m pip install -r \
 ```
 
 Separate virtual environments per backend are recommended when dependency versions conflict.
+For the CUDA 13.0 GPU setup tested with D-FINE, including the required PyTorch nightly index and
+Pillow fix, see
+[`docs/open_dfine_troubleshooting.md`](docs/open_dfine_troubleshooting.md).
 
 Build from the Autoware workspace root:
 

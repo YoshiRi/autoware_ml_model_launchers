@@ -233,20 +233,23 @@ if [[ "$pipeline" == "open_detector" || "$pipeline" == "open_yolo" ]] &&
     if [[ "$interpreter" == "/usr/bin/env python3" ]]; then
       interpreter="$(command -v python3)"
     fi
-    imports="cv2, numpy, vision_msgs, autoware_ml_model_launchers.open_detector"
+    import_check="import cv2, numpy, vision_msgs, autoware_ml_model_launchers.open_detector"
     case "$detector_backend" in
       ultralytics)
-        imports="$imports, ultralytics"
+        import_check="$import_check; import ultralytics"
         ;;
       dfine)
-        imports="$imports, torch, PIL, transformers"
+        import_check="$import_check; import torch, torchvision"
+        import_check="$import_check; from PIL import Image"
+        import_check="$import_check; assert hasattr(Image, 'Resampling')"
+        import_check="$import_check; from transformers import AutoImageProcessor, DFineForObjectDetection"
         ;;
       rfdetr)
-        imports="$imports, PIL, rfdetr"
+        import_check="$import_check; import PIL, rfdetr"
         ;;
     esac
     if [[ -x "$interpreter" ]] &&
-      "$interpreter" -c "import $imports" >/dev/null 2>&1; then
+      "$interpreter" -c "$import_check" >/dev/null 2>&1; then
       ok "open detector Python environment supports backend: $detector_backend"
     else
       fail "open detector cannot import backend '$detector_backend' dependencies: $interpreter"
