@@ -71,7 +71,13 @@ if(BUILD_TESTING)
     test
   )
   ament_pep257(autoware_ml_model_launchers)
-  ament_add_pytest_test(open_detector_tests test)
+  set(ENV{PYTEST_DISABLE_PLUGIN_AUTOLOAD} "1")
+  ament_add_pytest_test(
+    open_detector_tests
+    test
+    ENV "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
+  )
+  unset(ENV{PYTEST_DISABLE_PLUGIN_AUTOLOAD})
 endif()
 
 ament_package()
