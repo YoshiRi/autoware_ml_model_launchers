@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="camera_namespace" default="camera5"/>
+  <arg name="input/image" default="/sensing/camera/$(var camera_namespace)/image_raw/compressed"/>
+  <arg name="model" default="ustc-community/dfine-small-obj2coco"/>
+  <arg name="device" default="cuda:0"/>
+  <arg name="conf_thres" default="0.35"/>
+  <arg name="class_filter" default="person,bicycle,car,motorcycle,bus,truck,traffic light,stop sign"/>
+  <arg name="publish_debug_image" default="true"/>
+
+  <include file="$(find-pkg-share autoware_ml_model_launchers)/launch/open_detector.launch.xml">
+    <arg name="camera_namespace" value="$(var camera_namespace)"/>
+    <arg name="detector_name" value="open_dfine"/>
+    <arg name="input/image" value="$(var input/image)"/>
+    <arg name="backend" value="dfine"/>
+    <arg name="model" value="$(var model)"/>
+    <arg name="device" value="$(var device)"/>
+    <arg name="conf_thres" value="$(var conf_thres)"/>
+    <arg name="class_filter" value="$(var class_filter)"/>
+    <arg name="publish_debug_image" value="$(var publish_debug_image)"/>
+  </include>
+</launch>

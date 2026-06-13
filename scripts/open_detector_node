@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility entry point for the backend-switchable open detector node."""
+"""ROS executable wrapper for the backend-switchable open detector."""
 
 from autoware_ml_model_launchers.open_detector.ros_node import main
 

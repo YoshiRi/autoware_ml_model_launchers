@@ -5,15 +5,18 @@ set -u
 camera_namespace="camera5"
 data_path="/opt/autoware/mlmodels"
 pipeline="camera"
+detector_backend="ultralytics"
 errors=0
 warnings=0
 
 usage() {
   cat <<'EOF'
 Usage: check_environment [--pipeline PIPELINE] [--camera CAMERA_NAMESPACE]
-                         [--data-path MODEL_ROOT]
+                         [--data-path MODEL_ROOT] [--backend DETECTOR_BACKEND]
 
-PIPELINE is one of: camera, open_yolo, bevfusion, ptv3, centerpoint, streampetr.
+PIPELINE is one of: camera, open_detector, open_yolo, bevfusion, ptv3,
+                    centerpoint, streampetr.
+DETECTOR_BACKEND is one of: ultralytics, dfine, rfdetr, fake.
 EOF
 }
 
@@ -43,6 +46,14 @@ while [[ $# -gt 0 ]]; do
       data_path="$2"
       shift 2
       ;;
+    --backend)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        printf 'Missing value for --backend\n' >&2
+        exit 2
+      fi
+      detector_backend="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -56,10 +67,33 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "$pipeline" in
-  camera|open_yolo|bevfusion|ptv3|centerpoint|streampetr)
+  camera|open_detector|open_yolo|bevfusion|ptv3|centerpoint|streampetr)
     ;;
   *)
     printf 'Unknown pipeline: %s\n' "$pipeline" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$pipeline" == "open_yolo" ]]; then
+  detector_backend="ultralytics"
+fi
+
+case "$detector_backend" in
+  yolo|ultralytics_yolo)
+    detector_backend="ultralytics"
+    ;;
+  d-fine)
+    detector_backend="dfine"
+    ;;
+  rf-detr)
+    detector_backend="rfdetr"
+    ;;
+  ultralytics|dfine|rfdetr|fake)
+    ;;
+  *)
+    printf 'Unknown detector backend: %s\n' "$detector_backend" >&2
     usage >&2
     exit 2
     ;;
@@ -83,6 +117,9 @@ printf 'Autoware ML model launcher environment check\n'
 printf '  pipeline:  %s\n' "$pipeline"
 printf '  camera:    %s\n' "$camera_namespace"
 printf '  model root: %s\n\n' "$data_path"
+if [[ "$pipeline" == "open_detector" || "$pipeline" == "open_yolo" ]]; then
+  printf '  detector backend: %s\n\n' "$detector_backend"
+fi
 
 if command -v ros2 >/dev/null 2>&1; then
   ok "ros2 is available"
@@ -119,7 +156,7 @@ case "$pipeline" in
     )
     input_topics=("/sensing/camera/$camera_namespace/image_raw/compressed")
     ;;
-  open_yolo)
+  open_detector|open_yolo)
     required_packages=(
       autoware_ml_model_launchers
       vision_msgs
@@ -186,20 +223,33 @@ if command -v ros2 >/dev/null 2>&1; then
   done
 fi
 
-if [[ "$pipeline" == "open_yolo" ]] && command -v ros2 >/dev/null 2>&1; then
+if [[ "$pipeline" == "open_detector" || "$pipeline" == "open_yolo" ]] &&
+  command -v ros2 >/dev/null 2>&1; then
   open_yolo_prefix="$(ros2 pkg prefix autoware_ml_model_launchers 2>/dev/null || true)"
-  open_yolo_executable="$open_yolo_prefix/lib/autoware_ml_model_launchers/compressed_yolo_node"
+  open_yolo_executable="$open_yolo_prefix/lib/autoware_ml_model_launchers/open_detector_node"
   if [[ -x "$open_yolo_executable" ]]; then
     interpreter="$(head -n 1 "$open_yolo_executable")"
     interpreter="${interpreter#\#!}"
     if [[ "$interpreter" == "/usr/bin/env python3" ]]; then
       interpreter="$(command -v python3)"
     fi
+    imports="cv2, numpy, vision_msgs, autoware_ml_model_launchers.open_detector"
+    case "$detector_backend" in
+      ultralytics)
+        imports="$imports, ultralytics"
+        ;;
+      dfine)
+        imports="$imports, torch, PIL, transformers"
+        ;;
+      rfdetr)
+        imports="$imports, PIL, rfdetr"
+        ;;
+    esac
     if [[ -x "$interpreter" ]] &&
-      "$interpreter" -c "import cv2, numpy, ultralytics, vision_msgs" >/dev/null 2>&1; then
-      ok "open_yolo Python environment includes ultralytics and vision_msgs"
+      "$interpreter" -c "import $imports" >/dev/null 2>&1; then
+      ok "open detector Python environment supports backend: $detector_backend"
     else
-      fail "open_yolo executable cannot import its Python dependencies: $interpreter"
+      fail "open detector cannot import backend '$detector_backend' dependencies: $interpreter"
     fi
   else
     fail "open_yolo executable not found: $open_yolo_executable"

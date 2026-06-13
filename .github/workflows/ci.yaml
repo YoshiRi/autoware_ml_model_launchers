@@ -29,9 +29,13 @@ jobs:
           apt-get install --yes \
             libxml2-utils \
             python3-colcon-common-extensions \
+            python3-numpy \
+            python3-opencv \
             ros-humble-ament-cmake-python \
             ros-humble-ament-cmake-flake8 \
-            ros-humble-ament-cmake-pep257
+            ros-humble-ament-cmake-pep257 \
+            ros-humble-ament-cmake-pytest \
+            ros-humble-vision-msgs
 
       - name: Check formatting and syntax
         shell: bash

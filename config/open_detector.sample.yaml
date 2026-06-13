@@ -1,0 +1,37 @@
+open_detector:
+  ros__parameters:
+    input_topic: /sensing/camera/camera5/image_raw/compressed
+    input_image_type: compressed
+    detections_topic: /perception/object_recognition/detection/open_detector/camera5/detections
+    debug_image_topic: /perception/object_recognition/detection/open_detector/camera5/debug/image
+    debug_compressed_topic: /perception/object_recognition/detection/open_detector/camera5/debug/image/compressed
+    latency_topic: /perception/object_recognition/detection/open_detector/camera5/latency/infer_ms
+
+    backend: ultralytics
+    model: yolo26s.pt
+    device: "0"
+    imgsz: 960
+    conf_thres: 0.25
+    iou_thres: 0.70
+    max_det: 100
+    half: false
+    backend_config_json: "{}"
+    load_on_start: false
+
+    class_filter:
+      - person
+      - bicycle
+      - car
+      - motorcycle
+      - bus
+      - truck
+      - traffic light
+      - stop sign
+    label_map: []
+    use_default_driving_label_map: false
+
+    publish_debug_image: true
+    publish_debug_compressed: false
+    jpeg_quality: 85
+    drop_if_busy: true
+    log_interval_sec: 2.0

@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""CLI wrapper for open detector backend smoke tests."""
+
+from autoware_ml_model_launchers.open_detector.smoke_backends import main
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -80,8 +80,8 @@ ros2 run autoware_ml_model_launchers check_environment \
   --data-path /path/to/mlmodels
 ```
 
-Available pipelines are `camera`, `open_yolo`, `bevfusion`, `ptv3`, `centerpoint`, and
-`streampetr`.
+Available pipelines are `camera`, `open_detector`, `open_yolo`, `bevfusion`, `ptv3`,
+`centerpoint`, and `streampetr`.
 
 The default model tree must contain:
 
@@ -171,31 +171,53 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
 `node_namespace` defaults to `perception/<camera_namespace>`. `camera_namespace` controls the
 `/sensing/camera/<camera_namespace>` input path and per-camera output topic names.
 
-## Open YOLO comparison
+## Open detector comparison
 
-`open_yolo.launch.xml` launches the included `compressed_yolo_node` for comparison with Autoware
-YOLOX. It consumes the same compressed camera stream but publishes the generic
-`vision_msgs/msg/Detection2DArray` format.
+The included backend-switchable detector compares Autoware YOLOX with several open 2D detection
+models while keeping one ROS interface:
 
-The ROS node is included in this repository. The heavy Python runtime and model weights remain
-external. Ultralytics and its models also have separate license requirements; review
+| Launcher | Backend | Default model |
+| --- | --- | --- |
+| `open_yolo.launch.xml` | Ultralytics | `yolo26s.pt`, input size 960 |
+| `open_dfine.launch.xml` | Hugging Face D-FINE | `ustc-community/dfine-small-obj2coco` |
+| `open_rfdetr.launch.xml` | Roboflow RF-DETR | `small` |
+| `open_detector.launch.xml` | Select with `backend:=...` | Backend default |
+
+All backends consume the camera stream and publish `vision_msgs/msg/Detection2DArray`. Their class
+taxonomies and preprocessing differ from Autoware YOLOX, so outputs are for comparison rather than
+drop-in replacement.
+
+The ROS adapters are included in this repository. Heavy Python runtimes and model weights remain
+external and are loaded only for the selected backend. Review
 [`docs/open_yolo_design.md`](docs/open_yolo_design.md) before redistribution or product use.
 
-Install the ROS dependency:
+Install common ROS dependencies:
 
 ```bash
 sudo apt install ros-${ROS_DISTRO}-vision-msgs python3-opencv python3-venv
 ```
 
-Create an isolated Python environment from this repository:
+Create an isolated environment and install only the backend being tested:
 
 ```bash
-python3 -m venv ~/venvs/open_yolo --system-site-packages
-source ~/venvs/open_yolo/bin/activate
+python3 -m venv ~/venvs/open_detector --system-site-packages
+source ~/venvs/open_detector/bin/activate
 python3 -m pip install --upgrade pip
+
+# Ultralytics
 python3 -m pip install -r \
   "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-yolo.txt"
+
+# D-FINE
+python3 -m pip install -r \
+  "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-detector-dfine.txt"
+
+# RF-DETR
+python3 -m pip install -r \
+  "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-detector-rfdetr.txt"
 ```
+
+Separate virtual environments per backend are recommended when dependency versions conflict.
 
 Build from the Autoware workspace root:
 
@@ -206,39 +228,71 @@ colcon build --symlink-install --packages-select autoware_ml_model_launchers
 source install/setup.bash
 ```
 
-Activate the virtual environment before checking or launching Open YOLO:
+Activate the selected virtual environment before checking or launching:
 
 ```bash
-source ~/venvs/open_yolo/bin/activate
+source ~/venvs/open_detector/bin/activate
 
 ros2 run autoware_ml_model_launchers check_environment \
-  --pipeline open_yolo \
+  --pipeline open_detector \
+  --backend dfine \
   --camera camera5
-
-ros2 launch autoware_ml_model_launchers open_yolo.launch.xml camera_namespace:=camera5
 ```
 
-The default `model:=yolo26s.pt` may be downloaded by Ultralytics on first launch. For offline or
-repeatable runs, download the weight in advance and pass an absolute path:
+Launch each backend:
+
+```bash
+ros2 launch autoware_ml_model_launchers open_yolo.launch.xml camera_namespace:=camera5
+ros2 launch autoware_ml_model_launchers open_dfine.launch.xml camera_namespace:=camera5
+ros2 launch autoware_ml_model_launchers open_rfdetr.launch.xml camera_namespace:=camera5
+```
+
+The first launch may download model weights. For offline or repeatable runs, pre-download the
+weight and pass a local path where the backend supports it:
 
 ```bash
 ros2 launch autoware_ml_model_launchers open_yolo.launch.xml \
   camera_namespace:=camera5 \
   model:=/path/to/yolo26s.pt
+
+ros2 launch autoware_ml_model_launchers open_dfine.launch.xml \
+  camera_namespace:=camera5 \
+  model:=/path/to/local/huggingface/model
 ```
 
-The launcher defaults to `imgsz:=960` to match the Autoware YOLOX input size. Override `imgsz` when
-comparing performance or when GPU memory and throughput are constrained.
+Use the generic launcher for aliases or less common variants:
 
-Default outputs:
+```bash
+ros2 launch autoware_ml_model_launchers open_detector.launch.xml \
+  camera_namespace:=camera5 \
+  detector_name:=open_dfine_large \
+  backend:=dfine \
+  model:=ustc-community/dfine-xlarge-obj2coco \
+  device:=cuda:0
+```
 
-- Detections: `/perception/object_recognition/detection/open_yolo/camera5/detections`
-- Debug image: `/perception/object_recognition/detection/open_yolo/camera5/debug/image`
-- Predict time: `/perception/object_recognition/detection/open_yolo/camera5/latency/predict_ms`
+The Ultralytics backend defaults to `imgsz:=960` to match the Autoware YOLOX input size. D-FINE
+and RF-DETR own their input preprocessing and ignore this setting.
 
-Open YOLO detections and Autoware YOLOX ROIs use different message types and class taxonomies.
-`predict_ms` measures the complete Ultralytics `model.predict()` call, including preprocessing and
-postprocessing, so it must not be compared directly with an inference-only TensorRT metric.
+Default outputs use a backend-specific detector name:
+
+- Detections: `/perception/object_recognition/detection/<detector>/camera5/detections`
+- Debug image: `/perception/object_recognition/detection/<detector>/camera5/debug/image`
+- Inference time: `/perception/object_recognition/detection/<detector>/camera5/latency/infer_ms`
+
+For backward compatibility, `open_yolo.launch.xml` retains
+`/perception/object_recognition/detection/open_yolo/camera5/latency/predict_ms`.
+
+Run dependency-free plumbing and adapter checks:
+
+```bash
+ros2 run autoware_ml_model_launchers open_detector_smoke \
+  --backends fake \
+  --fail-on-error
+```
+
+`infer_ms` measures each backend adapter's complete inference call, which can include preprocessing
+and postprocessing. It must not be compared directly with an inference-only TensorRT metric.
 
 ## LiDAR model launchers
 
@@ -348,3 +402,5 @@ configuration.
 | CenterPoint | No | Tested | Not tested |
 | StreamPETR X2 | Yes | Tested | Parameters and ONNX load tested; full engine build not completed |
 | Open YOLO | Auto-download or explicit path | Tested | GPU inference and ROS topic round-trip tested |
+| Open D-FINE | Hugging Face or local path | Tested | Adapter and fake ROS plumbing tested |
+| Open RF-DETR | Auto-download or variant | Tested | Adapter and fake ROS plumbing tested |

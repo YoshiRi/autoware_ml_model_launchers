@@ -2,13 +2,13 @@
 
 ## Status
 
-The generic Ultralytics comparison node is maintained in
-`autoware_ml_model_launchers` alongside its launch file. Model weights and the Python machine
-learning runtime are intentionally not stored in this repository.
+The comparison node supports Ultralytics YOLO, Hugging Face D-FINE, and Roboflow RF-DETR through a
+backend-neutral ROS interface. Model weights and Python machine-learning runtimes are intentionally
+not stored in this repository.
 
 ## Goals
 
-- Provide a generic 2D detector for comparison with Autoware YOLOX.
+- Provide several generic 2D detectors for comparison with Autoware YOLOX.
 - Keep cloning and building the ROS package straightforward.
 - Use standard ROS messages rather than Autoware-specific detection messages.
 - Prevent model weights and large Python/CUDA packages from growing the Git repository.
@@ -16,23 +16,35 @@ learning runtime are intentionally not stored in this repository.
 
 ## Current structure
 
-- `autoware_ml_model_launchers/compressed_yolo_node.py`: compressed image inference node
-- `launch/open_yolo.launch.xml`: camera topics and model runtime parameters
-- `requirements-open-yolo.txt`: optional pip dependencies
+- `autoware_ml_model_launchers/open_detector/`: shared types, ROS I/O, and lazy-loaded backends
+- `autoware_ml_model_launchers/compressed_yolo_node.py`: compatibility entry point
+- `launch/open_detector.launch.xml`: backend-neutral launcher
+- `launch/open_yolo.launch.xml`: backward-compatible Ultralytics launcher
+- `launch/open_dfine.launch.xml`: D-FINE launcher
+- `launch/open_rfdetr.launch.xml`: RF-DETR launcher
+- `requirements-open-*.txt`: backend-specific pip dependencies
 - `/opt/autoware/mlmodels` or another external path: production-managed model storage
 
 The node publishes `vision_msgs/msg/Detection2DArray`. Its output is not a drop-in replacement for
 Autoware YOLOX because the message schema and class taxonomy differ.
 
-The launcher's default inference size is 960 to match the existing Autoware YOLOX comparison
-configuration. The default `yolo26s.pt` weight can be downloaded by Ultralytics, but an explicit
-local path is preferred for repeatable and offline runs.
+The Ultralytics launcher's default inference size is 960 to match the existing Autoware YOLOX
+comparison configuration. D-FINE and RF-DETR own their preprocessing. The convenience launchers
+default to smaller model variants that are practical on a 6 GB GPU. Explicit local model paths are
+preferred for repeatable and offline runs.
 
 ## Dependency policy
 
-ROS dependencies are declared in `package.xml`. Ultralytics, OpenCV, NumPy, PyTorch, and their CUDA
-runtime are optional Python dependencies installed in a virtual environment. The virtual
-environment should use `--system-site-packages` so it can import ROS Python packages.
+ROS, OpenCV, and NumPy dependencies are declared in `package.xml`. Heavy backend dependencies are
+split into separate requirements files and imported only by the selected backend:
+
+- Ultralytics: `requirements-open-yolo.txt`
+- D-FINE: `requirements-open-detector-dfine.txt`
+- RF-DETR: `requirements-open-detector-rfdetr.txt`
+
+Virtual environments should use `--system-site-packages` so they can import ROS Python packages.
+Separate environments per backend are preferred if PyTorch, Transformers, or RF-DETR dependency
+constraints conflict.
 
 Do not commit any of the following:
 
@@ -41,14 +53,16 @@ Do not commit any of the following:
 - pip download caches
 - generated datasets, bags, or debug images
 
-Ultralytics 8.4.65 reports an AGPL-3.0 license in its package metadata. The source code in this
-repository remains Apache-2.0, but redistribution and product use of the combined runtime must be
-reviewed against the applicable Ultralytics and model licenses.
+The source code in this repository remains Apache-2.0. Backend libraries and model weights retain
+their own licenses. In particular, Ultralytics 8.4.65 reports AGPL-3.0 in its package metadata.
+D-FINE model cards and RF-DETR documentation currently identify Apache-2.0, but the exact selected
+model and installed package must still be reviewed before redistribution or product use.
 
 ## When to split the implementation
 
-Keep the node in this repository while it remains a small comparison utility sharing the same
-camera validation workflow. Extract it when one or more of these conditions apply:
+Keep the adapters in this repository while the shared source remains small, optional dependencies
+stay lazy-loaded, and CI can run without installing real model runtimes. Extract them when one or
+more of these conditions apply:
 
 - multiple independent detectors, datasets, or evaluation frameworks are added
 - its release cadence differs from the Autoware launcher package
