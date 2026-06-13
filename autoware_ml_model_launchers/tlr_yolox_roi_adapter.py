@@ -11,12 +11,15 @@ from tier4_perception_msgs.msg import TrafficLightRoiArray
 
 
 class TlrYoloxRoiAdapter(Node):
+
     def __init__(self):
         super().__init__("tlr_yolox_roi_adapter")
 
         self.car_label_id = self.declare_parameter("car_label_id", 1).value
         self.pedestrian_label_id = self.declare_parameter("pedestrian_label_id", 2).value
-        self.traffic_light_id_offset = self.declare_parameter("traffic_light_id_offset", 100000).value
+        self.traffic_light_id_offset = self.declare_parameter(
+            "traffic_light_id_offset", 100000
+        ).value
         self.min_roi_width = self.declare_parameter("min_roi_width", 1).value
         self.min_roi_height = self.declare_parameter("min_roi_height", 1).value
 

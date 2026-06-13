@@ -3,15 +3,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 import threading
 import time
-from collections.abc import Iterable, Sequence
 from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
-import rclpy
 from rcl_interfaces.msg import ParameterDescriptor
+import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
