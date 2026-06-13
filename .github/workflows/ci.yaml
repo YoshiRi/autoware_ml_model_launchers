@@ -17,20 +17,16 @@ permissions:
 jobs:
   lint-and-build:
     runs-on: ubuntu-22.04
+    container: ros:humble-ros-base-jammy
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up ROS
-        uses: ros-tooling/setup-ros@v0.7
-        with:
-          required-ros-distributions: humble
-
       - name: Install build and lint dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
+          apt-get update
+          apt-get install --yes \
             libxml2-utils \
             python3-colcon-common-extensions \
             ros-humble-ament-cmake-python \
