@@ -1,3 +1,2 @@
+-r requirements-open-detector-common.txt
 ultralytics
-opencv-python>=4.6,<4.12
-numpy>=1.23,<2

@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""CLI wrapper for running an open detector backend on a local image."""
+
+from autoware_ml_model_launchers.open_detector.cli_detect_image import main
+
+
+if __name__ == "__main__":
+    main()

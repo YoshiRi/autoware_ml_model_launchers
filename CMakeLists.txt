@@ -15,6 +15,14 @@ install(
 
 install(
   PROGRAMS
+    scripts/open_detector_image
+    scripts/open_detector_node
+    scripts/open_detector_smoke
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  PROGRAMS
     autoware_ml_model_launchers/tlr_yolox_roi_adapter.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME tlr_yolox_roi_adapter
@@ -44,6 +52,9 @@ install(
 install(
   FILES
     README.md
+    requirements-open-detector-common.txt
+    requirements-open-detector-dfine.txt
+    requirements-open-detector-rfdetr.txt
     requirements-open-yolo.txt
   DESTINATION share/${PROJECT_NAME}
 )
@@ -51,13 +62,16 @@ install(
 if(BUILD_TESTING)
   find_package(ament_cmake_flake8 REQUIRED)
   find_package(ament_cmake_pep257 REQUIRED)
+  find_package(ament_cmake_pytest REQUIRED)
 
   ament_flake8(
     CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/setup.cfg"
     autoware_ml_model_launchers
     setup.py
+    test
   )
   ament_pep257(autoware_ml_model_launchers)
+  ament_add_pytest_test(open_detector_tests test)
 endif()
 
 ament_package()

@@ -1,20 +1,28 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="camera_namespace" default="camera5"/>
+  <arg name="detector_name" default="open_detector"/>
   <arg name="input/image" default="/sensing/camera/$(var camera_namespace)/image_raw/compressed"/>
-  <arg name="output/detections" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/detections"/>
-  <arg name="output/debug_image" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/debug/image"/>
-  <arg name="output/debug_compressed" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/debug/image/compressed"/>
-  <arg name="output/predict_ms" default="/perception/object_recognition/detection/open_yolo/$(var camera_namespace)/latency/predict_ms"/>
+  <arg name="input_image_type" default="compressed"/>
+  <arg name="output/detections" default="/perception/object_recognition/detection/$(var detector_name)/$(var camera_namespace)/detections"/>
+  <arg name="output/debug_image" default="/perception/object_recognition/detection/$(var detector_name)/$(var camera_namespace)/debug/image"/>
+  <arg name="output/debug_compressed" default="/perception/object_recognition/detection/$(var detector_name)/$(var camera_namespace)/debug/image/compressed"/>
+  <arg name="output/latency" default="/perception/object_recognition/detection/$(var detector_name)/$(var camera_namespace)/latency/infer_ms"/>
 
-  <arg name="model" default="yolo26s.pt"/>
+  <arg name="backend" default="ultralytics"/>
+  <arg name="model" default=""/>
   <arg name="device" default="0"/>
   <arg name="imgsz" default="960"/>
   <arg name="conf_thres" default="0.25"/>
   <arg name="iou_thres" default="0.70"/>
   <arg name="max_det" default="100"/>
   <arg name="half" default="false"/>
+  <arg name="backend_config_json" default="{}"/>
+  <arg name="load_on_start" default="false"/>
+
   <arg name="class_filter" default="person,bicycle,car,motorcycle,bus,truck,traffic light,stop sign"/>
+  <arg name="label_map" default="[]"/>
+  <arg name="use_default_driving_label_map" default="false"/>
   <arg name="publish_debug_image" default="true"/>
   <arg name="publish_debug_compressed" default="false"/>
   <arg name="drop_if_busy" default="true"/>
@@ -22,15 +30,16 @@
   <node
     pkg="autoware_ml_model_launchers"
     exec="open_detector_node"
-    name="open_yolo_detector"
+    name="$(var detector_name)"
     output="screen"
   >
     <param name="input_topic" value="$(var input/image)"/>
+    <param name="input_image_type" value="$(var input_image_type)"/>
     <param name="detections_topic" value="$(var output/detections)"/>
     <param name="debug_image_topic" value="$(var output/debug_image)"/>
     <param name="debug_compressed_topic" value="$(var output/debug_compressed)"/>
-    <param name="latency_topic" value="$(var output/predict_ms)"/>
-    <param name="backend" value="ultralytics"/>
+    <param name="latency_topic" value="$(var output/latency)"/>
+    <param name="backend" value="$(var backend)"/>
     <param name="model" value="$(var model)"/>
     <param name="device" value="$(var device)"/>
     <param name="imgsz" value="$(var imgsz)"/>
@@ -38,7 +47,11 @@
     <param name="iou_thres" value="$(var iou_thres)"/>
     <param name="max_det" value="$(var max_det)"/>
     <param name="half" value="$(var half)"/>
+    <param name="backend_config_json" value="$(var backend_config_json)"/>
+    <param name="load_on_start" value="$(var load_on_start)"/>
     <param name="class_filter" value="$(var class_filter)"/>
+    <param name="label_map" value="$(var label_map)"/>
+    <param name="use_default_driving_label_map" value="$(var use_default_driving_label_map)"/>
     <param name="publish_debug_image" value="$(var publish_debug_image)"/>
     <param name="publish_debug_compressed" value="$(var publish_debug_compressed)"/>
     <param name="drop_if_busy" value="$(var drop_if_busy)"/>
