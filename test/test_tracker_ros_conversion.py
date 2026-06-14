@@ -1,3 +1,5 @@
+import pytest
+
 from autoware_ml_model_launchers.open_tracker.ros_conversion import (
     detections_from_autoware,
     detections_from_detection2d_array,
@@ -54,11 +56,11 @@ def test_vision_msgs_round_trip_preserves_track_id():
 
 
 def test_autoware_round_trip_preserves_object_and_emits_uuid():
-    from autoware_perception_msgs.msg import ObjectClassification
-    from tier4_perception_msgs.msg import (
-        DetectedObjectWithFeature,
-        DetectedObjectsWithFeature,
-    )
+    autoware_msgs = pytest.importorskip("autoware_perception_msgs.msg")
+    tier4_msgs = pytest.importorskip("tier4_perception_msgs.msg")
+    ObjectClassification = autoware_msgs.ObjectClassification
+    DetectedObjectWithFeature = tier4_msgs.DetectedObjectWithFeature
+    DetectedObjectsWithFeature = tier4_msgs.DetectedObjectsWithFeature
 
     source = DetectedObjectsWithFeature()
     source.header.frame_id = "camera"

@@ -48,6 +48,10 @@ def test_open_detector_node_loads_fake_model_on_start():
 
 @pytest.mark.parametrize("message_type", ["vision_msgs", "autoware"])
 def test_reusable_bbox_tracker_starts(message_type):
+    if message_type == "autoware":
+        pytest.importorskip("autoware_perception_msgs.msg")
+        pytest.importorskip("tier4_perception_msgs.msg")
+
     launch_path = (
         Path(__file__).parents[1] / "launch" / "reusable_bbox_tracker.launch.xml"
     )
