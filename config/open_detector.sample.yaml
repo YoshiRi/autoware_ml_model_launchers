@@ -16,7 +16,6 @@ open_detector:
     max_det: 100
     half: false
     backend_config_json: "{}"
-    load_on_start: false
 
     class_filter:
       - person

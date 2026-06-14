@@ -12,7 +12,7 @@ class UltralyticsYoloBackend(BaseDetectorBackend):
     """
     Ultralytics YOLO backend.
 
-    Heavy dependency is imported in load(), not at package import time.
+    Heavy dependency is imported when the detector factory loads this backend.
     """
 
     DEFAULT_MODEL = "yolo26s.pt"
@@ -40,8 +40,7 @@ class UltralyticsYoloBackend(BaseDetectorBackend):
         return {}
 
     def infer(self, image_bgr: np.ndarray) -> List[Detection]:
-        if not self.loaded:
-            self.load()
+        self.require_loaded()
 
         results = self.model.predict(
             source=image_bgr,

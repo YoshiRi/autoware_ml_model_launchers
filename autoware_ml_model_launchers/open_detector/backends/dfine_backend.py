@@ -22,7 +22,7 @@ class DFineBackend(BaseDetectorBackend):
         except ImportError as exc:
             raise ImportError(
                 "D-FINE backend selected but required packages are missing. "
-                "Install with: python3 -m pip install torch pillow transformers"
+                "Install requirements-open-detector-dfine.txt"
             ) from exc
 
         self.torch = torch
@@ -59,8 +59,7 @@ class DFineBackend(BaseDetectorBackend):
         return {}
 
     def infer(self, image_bgr: np.ndarray) -> List[Detection]:
-        if not self.loaded:
-            self.load()
+        self.require_loaded()
 
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         image = self.Image.fromarray(rgb)

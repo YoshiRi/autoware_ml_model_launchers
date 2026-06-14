@@ -1,1 +1,1 @@
-rfdetr
+rfdetr>=1.7.1

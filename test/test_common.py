@@ -42,16 +42,22 @@ def test_filter_and_mapping():
 def test_backend_alias_and_fake():
     assert canonical_backend_name("yolo") == "ultralytics"
     backend = create_backend(BackendConfig(backend="fake"))
-    assert backend.loaded is False
+    assert backend.loaded is True
 
 
 @pytest.mark.parametrize(
     "name",
     ["ultralytics", "yolo", "dfine", "d-fine", "rfdetr", "rf-detr", "fake"],
 )
-def test_backend_constructors_are_lazy(name):
-    backend = create_backend(BackendConfig(backend=name))
+def test_backend_factory_can_skip_loading_for_adapter_tests(name):
+    backend = create_backend(BackendConfig(backend=name), load=False)
     assert backend.loaded is False
+
+
+def test_unloaded_backend_rejects_inference():
+    backend = create_backend(BackendConfig(backend="fake"), load=False)
+    with pytest.raises(RuntimeError, match="model is not loaded"):
+        backend.infer(make_image())
 
 
 def test_fake_cli_outputs_json_and_debug_image(tmp_path):

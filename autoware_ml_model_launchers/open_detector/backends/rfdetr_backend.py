@@ -80,8 +80,7 @@ class RFDetrBackend(BaseDetectorBackend):
         return str(class_id)
 
     def infer(self, image_bgr: np.ndarray) -> List[Detection]:
-        if not self.loaded:
-            self.load()
+        self.require_loaded()
 
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         pil_image = self.Image.fromarray(rgb)

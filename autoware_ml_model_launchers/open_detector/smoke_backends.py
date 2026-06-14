@@ -119,7 +119,6 @@ def _run_backend(name: str, image, args, label_map: Dict[str, str], class_filter
 
     try:
         backend = create_backend(config)
-        backend.load()
 
         raw = []
         timings_ms: List[float] = []

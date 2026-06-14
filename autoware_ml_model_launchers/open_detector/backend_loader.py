@@ -23,28 +23,33 @@ def canonical_backend_name(name: str) -> str:
     return BACKEND_ALIASES[key]
 
 
-def create_backend(config: BackendConfig):
+def create_backend(config: BackendConfig, *, load: bool = True):
     """
-    Create a backend with lazy imports.
+    Create a detector backend and load its model by default.
 
-    Only the selected backend module is imported. Heavy ML libraries are imported inside
-    backend.load(), so missing dependencies do not break unrelated backends or unit tests.
+    Only the selected backend module is imported. When `load` is true, the returned detector
+    is ready for inference; dependency and model errors are raised during construction.
     """
     name = canonical_backend_name(config.backend)
     if name == "ultralytics":
         from .backends.ultralytics_backend import UltralyticsYoloBackend
 
-        return UltralyticsYoloBackend(config)
-    if name == "dfine":
+        backend = UltralyticsYoloBackend(config)
+    elif name == "dfine":
         from .backends.dfine_backend import DFineBackend
 
-        return DFineBackend(config)
-    if name == "rfdetr":
+        backend = DFineBackend(config)
+    elif name == "rfdetr":
         from .backends.rfdetr_backend import RFDetrBackend
 
-        return RFDetrBackend(config)
-    if name == "fake":
+        backend = RFDetrBackend(config)
+    elif name == "fake":
         from .backends.fake_backend import FakeBackend
 
-        return FakeBackend(config)
-    raise AssertionError(f"Unhandled backend {name}")
+        backend = FakeBackend(config)
+    else:
+        raise AssertionError(f"Unhandled backend {name}")
+
+    if load:
+        backend.load()
+    return backend
