@@ -44,3 +44,37 @@ def test_open_detector_node_loads_fake_model_on_start():
     service = LaunchService()
     service.include_launch_description(description)
     assert service.run() == 0
+
+
+@pytest.mark.parametrize("message_type", ["vision_msgs", "autoware"])
+def test_reusable_bbox_tracker_starts(message_type):
+    launch_path = (
+        Path(__file__).parents[1] / "launch" / "reusable_bbox_tracker.launch.xml"
+    )
+    description = LaunchDescription(
+        [
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(str(launch_path)),
+                launch_arguments={
+                    "message_type": message_type,
+                    "tracker_backend": "simple_iou",
+                }.items(),
+            ),
+            TimerAction(
+                period=1.0,
+                actions=[EmitEvent(event=Shutdown(reason="launch test complete"))],
+            ),
+        ]
+    )
+
+    service = LaunchService()
+    service.include_launch_description(description)
+    assert service.run() == 0
+
+
+def test_yolox_python_tracker_launcher_parses():
+    launch_path = (
+        Path(__file__).parents[1] / "launch" / "yolox_python_tracker.launch.xml"
+    )
+    source = AnyLaunchDescriptionSource(str(launch_path))
+    assert source.get_launch_description(LaunchContext()) is not None

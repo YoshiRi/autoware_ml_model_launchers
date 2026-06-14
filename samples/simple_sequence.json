@@ -1,0 +1,24 @@
+{
+  "frames": [
+    {
+      "stamp": 0.0,
+      "detections": [
+        {"bbox": [100, 100, 200, 220], "score": 0.9, "label": "car", "class_id": 2},
+        {"bbox": [400, 100, 450, 210], "score": 0.8, "label": "person", "class_id": 0}
+      ]
+    },
+    {
+      "stamp": 0.1,
+      "detections": [
+        {"bbox": [106, 102, 206, 222], "score": 0.91, "label": "car", "class_id": 2},
+        {"bbox": [402, 105, 452, 215], "score": 0.83, "label": "person", "class_id": 0}
+      ]
+    },
+    {
+      "stamp": 0.2,
+      "detections": [
+        {"bbox": [112, 104, 212, 224], "score": 0.88, "label": "car", "class_id": 2}
+      ]
+    }
+  ]
+}
