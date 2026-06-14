@@ -21,7 +21,11 @@ class BaseDetectorBackend:
     def load(self) -> None:
         self.loaded = True
 
-    def infer(self, image_bgr: np.ndarray) -> List[Detection]:
+    def require_loaded(self) -> None:
+        """Raise when inference is attempted before model initialization."""
         if not self.loaded:
-            self.load()
+            raise RuntimeError(f"{self.name} detector model is not loaded")
+
+    def infer(self, image_bgr: np.ndarray) -> List[Detection]:
+        self.require_loaded()
         raise NotImplementedError

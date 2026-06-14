@@ -16,7 +16,7 @@ not stored in this repository.
 
 ## Current structure
 
-- `autoware_ml_model_launchers/open_detector/`: shared types, ROS I/O, and lazy-loaded backends
+- `autoware_ml_model_launchers/open_detector/`: shared types, ROS I/O, and detector backends
 - `autoware_ml_model_launchers/compressed_yolo_node.py`: compatibility entry point
 - `launch/open_detector.launch.xml`: backend-neutral launcher
 - `launch/open_yolo.launch.xml`: backward-compatible Ultralytics launcher
@@ -46,6 +46,11 @@ Virtual environments should use `--system-site-packages` so they can import ROS 
 Separate environments per backend are preferred if PyTorch, Transformers, or RF-DETR dependency
 constraints conflict.
 
+`create_backend()` is the detector construction boundary. It imports only the selected backend,
+loads that backend's model, and returns a detector ready for inference. The ROS node therefore fails
+during initialization when dependencies, model files, downloads, or GPU setup are invalid rather
+than waiting for the first image.
+
 Do not commit any of the following:
 
 - model weights such as `.pt`, `.onnx`, or TensorRT engine files
@@ -61,7 +66,7 @@ model and installed package must still be reviewed before redistribution or prod
 ## When to split the implementation
 
 Keep the adapters in this repository while the shared source remains small, optional dependencies
-stay lazy-loaded, and CI can run without installing real model runtimes. Extract them when one or
+remain backend-specific, and CI can run without installing real model runtimes. Extract them when one or
 more of these conditions apply:
 
 - multiple independent detectors, datasets, or evaluation frameworks are added

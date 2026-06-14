@@ -12,8 +12,7 @@ class FakeBackend(BaseDetectorBackend):
     """Dependency-free backend for CLI/ROS plumbing tests."""
 
     def infer(self, image_bgr: np.ndarray) -> List[Detection]:
-        if not self.loaded:
-            self.load()
+        self.require_loaded()
         height, width = image_bgr.shape[:2]
         return [
             Detection(

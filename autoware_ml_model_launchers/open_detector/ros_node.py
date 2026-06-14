@@ -34,7 +34,7 @@ class OpenDetectorNode(Node):
     """
     Backend-switchable detector node.
 
-    The ROS interface is fixed. The backend is selected by parameter and lazy-loaded.
+    The ROS interface is fixed. The selected detector model is loaded during node initialization.
     """
 
     def __init__(self) -> None:
@@ -59,7 +59,6 @@ class OpenDetectorNode(Node):
         self.declare_parameter("max_det", 100)
         self.declare_parameter("half", False)
         self.declare_parameter("backend_config_json", "{}")
-        self.declare_parameter("load_on_start", False)
 
         # Output behavior.
         self.declare_parameter(
@@ -141,10 +140,10 @@ class OpenDetectorNode(Node):
             half=half,
             extra=extra,
         )
+        self.get_logger().info(
+            f"Loading detector: backend={backend} model={model or '<backend-default>'}"
+        )
         self.backend = create_backend(self.backend_config)
-        if bool(self.get_parameter("load_on_start").value):
-            self.get_logger().info(f"Loading backend on start: {backend} model={model or '<default>'}")
-            self.backend.load()
 
         self.infer_lock = threading.Lock()
         self.last_log_time = 0.0

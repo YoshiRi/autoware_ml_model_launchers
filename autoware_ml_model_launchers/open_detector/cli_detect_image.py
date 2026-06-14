@@ -64,7 +64,6 @@ def main(argv: List[str] | None = None) -> None:
         half=args.half,
     )
     backend = create_backend(config)
-    backend.load()
 
     last = []
     timings_ms: List[float] = []

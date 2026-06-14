@@ -1,1 +1,1 @@
-"""Backend implementations are imported lazily by backend_loader.create_backend."""
+"""Backend implementations selected and initialized by backend_loader.create_backend."""

@@ -188,7 +188,8 @@ taxonomies and preprocessing differ from Autoware YOLOX, so outputs are for comp
 drop-in replacement.
 
 The ROS adapters are included in this repository. Heavy Python runtimes and model weights remain
-external and are loaded only for the selected backend. Review
+external. The selected backend loads its model while the ROS node starts, so dependency or model
+errors are reported before the node becomes ready. Review
 [`docs/open_yolo_design.md`](docs/open_yolo_design.md) before redistribution or product use.
 
 Install common ROS dependencies:
@@ -216,6 +217,8 @@ python3 -m pip install -r \
 python3 -m pip install -r \
   "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-detector-rfdetr.txt"
 ```
+
+The RF-DETR requirements file installs the `rfdetr` package used by `open_rfdetr.launch.xml`.
 
 Separate virtual environments per backend are recommended when dependency versions conflict.
 For the CUDA 13.0 GPU setup tested with D-FINE, including the required PyTorch nightly index and
@@ -406,4 +409,4 @@ configuration.
 | StreamPETR X2 | Yes | Tested | Parameters and ONNX load tested; full engine build not completed |
 | Open YOLO | Auto-download or explicit path | Tested | GPU inference and ROS topic round-trip tested |
 | Open D-FINE | Hugging Face or local path | Tested | Adapter and fake ROS plumbing tested |
-| Open RF-DETR | Auto-download or variant | Tested | Adapter and fake ROS plumbing tested |
+| Open RF-DETR | Auto-download or variant | Tested | GPU inference and visualization tested |
