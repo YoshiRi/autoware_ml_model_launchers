@@ -18,6 +18,7 @@ install(
     scripts/open_detector_image
     scripts/open_detector_node
     scripts/open_detector_smoke
+    scripts/reusable_bbox_tracker_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -55,6 +56,7 @@ install(
     requirements-open-detector-common.txt
     requirements-open-detector-dfine.txt
     requirements-open-detector-rfdetr.txt
+    requirements-open-tracker-bbox.txt
     requirements-open-yolo.txt
   DESTINATION share/${PROJECT_NAME}
 )

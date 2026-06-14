@@ -1,0 +1,36 @@
+<launch>
+  <arg name="camera_namespace" default="camera5"/>
+  <arg name="detector_name" default="open_dfine"/>
+  <arg name="tracker_name" default="simple_iou"/>
+  <arg name="tracker_backend" default="simple_iou"/>
+  <arg name="message_type" default="vision_msgs" description="vision_msgs or autoware"/>
+
+  <arg name="input_detections" default="/perception/object_recognition/detection/$(var detector_name)/$(var camera_namespace)/detections"/>
+  <arg name="output_detections" default="/perception/object_recognition/tracking/$(var tracker_name)/$(var detector_name)/$(var camera_namespace)/tracked_detections"/>
+  <arg name="output_track_ids" default="/perception/object_recognition/tracking/$(var tracker_name)/$(var detector_name)/$(var camera_namespace)/track_ids"/>
+  <arg name="latency_topic" default="/perception/object_recognition/tracking/$(var tracker_name)/$(var detector_name)/$(var camera_namespace)/latency/update_ms"/>
+
+  <arg name="iou_threshold" default="0.30"/>
+  <arg name="max_missed" default="5"/>
+  <arg name="min_hits" default="1"/>
+  <arg name="score_threshold" default="0.0"/>
+  <arg name="class_agnostic" default="false"/>
+  <arg name="emit_unmatched_tracks" default="false"/>
+  <arg name="jsonl_path" default=""/>
+
+  <node pkg="autoware_ml_model_launchers" exec="reusable_bbox_tracker_node" name="$(var tracker_name)_bbox_tracker" output="screen">
+    <param name="message_type" value="$(var message_type)"/>
+    <param name="input_detections" value="$(var input_detections)"/>
+    <param name="output_detections" value="$(var output_detections)"/>
+    <param name="output_track_ids" value="$(var output_track_ids)"/>
+    <param name="latency_topic" value="$(var latency_topic)"/>
+    <param name="tracker_backend" value="$(var tracker_backend)"/>
+    <param name="iou_threshold" value="$(var iou_threshold)"/>
+    <param name="max_missed" value="$(var max_missed)"/>
+    <param name="min_hits" value="$(var min_hits)"/>
+    <param name="score_threshold" value="$(var score_threshold)"/>
+    <param name="class_agnostic" value="$(var class_agnostic)"/>
+    <param name="emit_unmatched_tracks" value="$(var emit_unmatched_tracks)"/>
+    <param name="jsonl_path" value="$(var jsonl_path)"/>
+  </node>
+</launch>

@@ -300,6 +300,67 @@ ros2 run autoware_ml_model_launchers open_detector_smoke \
 `infer_ms` measures each backend adapter's complete inference call, which can include preprocessing
 and postprocessing. It must not be compared directly with an inference-only TensorRT metric.
 
+## Reusable Python ROI tracker
+
+`reusable_bbox_tracker_node` tracks 2D bounding boxes without depending on a specific detector.
+It supports both message interfaces:
+
+- `vision_msgs/msg/Detection2DArray`: track IDs are written to `Detection2D.id`.
+- `tier4_perception_msgs/msg/DetectedObjectsWithFeature`: tracked ROIs retain the source Autoware
+  object fields, and IDs are published as a matching `DynamicObjectArray`.
+
+The dependency-free `simple_iou` backend is the default smoke-test implementation. The optional
+Python tracker backends use the `trackers` package:
+
+```bash
+python3 -m venv ~/venvs/open_tracker --system-site-packages
+source ~/venvs/open_tracker/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r \
+  "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-tracker-bbox.txt"
+```
+
+Use a separate environment from the open detector environments: `trackers 2.4.0` requires NumPy 2,
+while some detector environments currently constrain NumPy below 2.
+
+Run YOLOX and connect its Autoware ROI output to the Python tracker:
+
+```bash
+cd "${AUTOWARE_WS}"
+source /opt/ros/${ROS_DISTRO}/setup.bash
+source ~/venvs/open_tracker/bin/activate
+source install/setup.bash
+
+# trackers package ByteTrack implementation (the launcher default)
+ros2 launch autoware_ml_model_launchers yolox_python_tracker.launch.xml \
+  camera_namespace:=camera5
+
+# Dependency-free smoke-test tracker
+ros2 launch autoware_ml_model_launchers yolox_python_tracker.launch.xml \
+  camera_namespace:=camera5 \
+  tracker_backend:=simple_iou
+```
+
+Default YOLOX tracker outputs:
+
+- Tracked ROIs: `/perception/object_recognition/detection/camera5/python_tracked/rois`
+- Track UUIDs: `/perception/object_recognition/detection/camera5/python_tracked/uuid`
+- Update latency: `/perception/object_recognition/detection/camera5/python_tracked/latency/update_ms`
+
+For detectors that publish `vision_msgs`, launch the generic tracker:
+
+```bash
+ros2 launch autoware_ml_model_launchers reusable_bbox_tracker.launch.xml \
+  camera_namespace:=camera5 \
+  detector_name:=open_dfine \
+  message_type:=vision_msgs \
+  tracker_name:=python_bytetrack \
+  tracker_backend:=roboflow_bytetrack
+```
+
+Available backends are `simple_iou`, `roboflow_bytetrack`, `roboflow_ocsort`, and
+`roboflow_sort`. This node is ROI-only; it does not consume camera images or provide ReID.
+
 ## LiDAR model launchers
 
 The following launchers use `/sensing/lidar/concatenated/pointcloud` by default. Override
@@ -410,3 +471,4 @@ configuration.
 | Open YOLO | Auto-download or explicit path | Tested | GPU inference and ROS topic round-trip tested |
 | Open D-FINE | Hugging Face or local path | Tested | Adapter and fake ROS plumbing tested |
 | Open RF-DETR | Auto-download or variant | Tested | GPU inference and visualization tested |
+| Reusable Python tracker | None for `simple_iou` | Tested | Both ROS message modes and YOLOX connection tested |

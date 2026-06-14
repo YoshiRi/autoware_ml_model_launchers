@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="camera_namespace" default="camera5"/>
+  <arg name="node_namespace" default="perception/$(var camera_namespace)"/>
+  <arg name="use_decompress" default="true"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="build_only" default="false"/>
+
+  <arg name="data_path" default="/opt/autoware/mlmodels"/>
+  <arg name="model_folder_name" default="yolox"/>
+  <arg name="model_name" default="yolox-sPlus-T4-960x960-debris.onnx"/>
+  <arg name="model_path" default="$(var data_path)/$(var model_folder_name)/$(var model_name)"/>
+  <arg name="label_path" default="$(var data_path)/$(var model_folder_name)/label.txt"/>
+  <arg name="semantic_segmentation_color_map_path" default="$(var data_path)/$(var model_folder_name)/semseg_color_map.csv"/>
+
+  <arg name="input/image" default="/sensing/camera/$(var camera_namespace)/image_raw"/>
+  <arg name="output/objects" default="/perception/object_recognition/detection/$(var camera_namespace)/rois"/>
+  <arg name="output/mask" default="/perception/object_recognition/detection/$(var camera_namespace)/mask"/>
+  <arg name="output/tracked_objects" default="/perception/object_recognition/detection/$(var camera_namespace)/python_tracked/rois"/>
+  <arg name="output/track_ids" default="/perception/object_recognition/detection/$(var camera_namespace)/python_tracked/uuid"/>
+  <arg name="output/tracker_latency" default="/perception/object_recognition/detection/$(var camera_namespace)/python_tracked/latency/update_ms"/>
+
+  <arg name="tracker_name" default="python_bytetrack"/>
+  <arg name="tracker_backend" default="roboflow_bytetrack"/>
+  <arg name="iou_threshold" default="0.30"/>
+  <arg name="max_missed" default="5"/>
+  <arg name="min_hits" default="1"/>
+  <arg name="score_threshold" default="0.0"/>
+  <arg name="class_agnostic" default="false"/>
+  <arg name="emit_unmatched_tracks" default="false"/>
+
+  <include file="$(find-pkg-share autoware_ml_model_launchers)/launch/yolox_camera.launch.xml">
+    <arg name="camera_namespace" value="$(var camera_namespace)"/>
+    <arg name="node_namespace" value="$(var node_namespace)"/>
+    <arg name="use_decompress" value="$(var use_decompress)"/>
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="build_only" value="$(var build_only)"/>
+    <arg name="enable_bytetrack" value="false"/>
+    <arg name="input/image" value="$(var input/image)"/>
+    <arg name="data_path" value="$(var data_path)"/>
+    <arg name="model_folder_name" value="$(var model_folder_name)"/>
+    <arg name="model_name" value="$(var model_name)"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="label_path" value="$(var label_path)"/>
+    <arg name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
+    <arg name="output/objects" value="$(var output/objects)"/>
+    <arg name="output/mask" value="$(var output/mask)"/>
+  </include>
+
+  <include file="$(find-pkg-share autoware_ml_model_launchers)/launch/reusable_bbox_tracker.launch.xml">
+    <arg name="camera_namespace" value="$(var camera_namespace)"/>
+    <arg name="detector_name" value="yolox"/>
+    <arg name="tracker_name" value="$(var tracker_name)"/>
+    <arg name="tracker_backend" value="$(var tracker_backend)"/>
+    <arg name="message_type" value="autoware"/>
+    <arg name="input_detections" value="$(var output/objects)"/>
+    <arg name="output_detections" value="$(var output/tracked_objects)"/>
+    <arg name="output_track_ids" value="$(var output/track_ids)"/>
+    <arg name="latency_topic" value="$(var output/tracker_latency)"/>
+    <arg name="iou_threshold" value="$(var iou_threshold)"/>
+    <arg name="max_missed" value="$(var max_missed)"/>
+    <arg name="min_hits" value="$(var min_hits)"/>
+    <arg name="score_threshold" value="$(var score_threshold)"/>
+    <arg name="class_agnostic" value="$(var class_agnostic)"/>
+    <arg name="emit_unmatched_tracks" value="$(var emit_unmatched_tracks)"/>
+  </include>
+</launch>
