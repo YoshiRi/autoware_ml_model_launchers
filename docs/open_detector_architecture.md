@@ -105,6 +105,6 @@ this repository makes refactoring cheaper.
    needed.
 3. Add backend capability metadata for task type, default model, supported devices, and required
    dependency extras.
-4. Add YOLO-World as an open-vocabulary detection backend using the pure Python CLI first.
+4. Expand YOLO-World prompt handling after the pure Python CLI path is stable.
 5. Add segmentation result types before introducing segmentation launchers.
 6. Prototype a local web UI against the core runtime after backend metadata exists.

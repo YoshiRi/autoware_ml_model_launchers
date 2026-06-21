@@ -7,6 +7,10 @@ BACKEND_ALIASES = {
     "yolo": "ultralytics",
     "ultralytics_yolo": "ultralytics",
     "ultralytics": "ultralytics",
+    "world": "yolo_world",
+    "yolo-world": "yolo_world",
+    "yolo_world": "yolo_world",
+    "yoloworld": "yolo_world",
     "dfine": "dfine",
     "d-fine": "dfine",
     "rfdetr": "rfdetr",
@@ -35,6 +39,10 @@ def create_backend(config: BackendConfig, *, load: bool = True):
         from .backends.ultralytics_backend import UltralyticsYoloBackend
 
         backend = UltralyticsYoloBackend(config, autoload=load)
+    elif name == "yolo_world":
+        from .backends.yolo_world_backend import YoloWorldBackend
+
+        backend = YoloWorldBackend(config, autoload=load)
     elif name == "dfine":
         from .backends.dfine_backend import DFineBackend
 

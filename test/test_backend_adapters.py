@@ -3,6 +3,7 @@ import numpy as np
 from autoware_ml_model_launchers.open_detector.backends.dfine_backend import DFineBackend
 from autoware_ml_model_launchers.open_detector.backends.rfdetr_backend import RFDetrBackend
 from autoware_ml_model_launchers.open_detector.backends.ultralytics_backend import UltralyticsYoloBackend
+from autoware_ml_model_launchers.open_detector.backends.yolo_world_backend import YoloWorldBackend
 from autoware_ml_model_launchers.open_detector.backend_loader import create_backend
 from autoware_ml_model_launchers.open_detector.types import BackendConfig
 
@@ -68,6 +69,51 @@ def test_ultralytics_adapter_converts_model_result_to_detections():
     assert detections[0].x1 == 10.0
     assert backend.model.kwargs["device"] == "0"
     assert backend.model.kwargs["imgsz"] == 960
+
+
+def test_yolo_world_adapter_uses_prompt_classes_for_labels():
+    class Boxes:
+        xyxy = TensorLike([[12.0, 22.0, 32.0, 52.0]])
+        conf = TensorLike([0.73])
+        cls = TensorLike([1])
+
+        def __len__(self):
+            return 1
+
+    class Result:
+        boxes = Boxes()
+        names = {}
+
+    class Model:
+        names = {}
+
+        def predict(self, **kwargs):
+            self.kwargs = kwargs
+            return [Result()]
+
+    backend = YoloWorldBackend(
+        BackendConfig(
+            backend="yolo_world",
+            device="cpu",
+            imgsz=640,
+            max_det=10,
+            extra={"classes": ["traffic cone", "forklift"]},
+        ),
+        autoload=False,
+    )
+    backend.model = Model()
+    backend.names = {}
+    backend.prompt_classes = ["traffic cone", "forklift"]
+    backend.loaded = True
+
+    detections = backend.infer(np.zeros((100, 200, 3), dtype=np.uint8))
+
+    assert len(detections) == 1
+    assert detections[0].label == "forklift"
+    assert detections[0].source == "yolo_world"
+    assert detections[0].metadata["prompt_classes"] == ["traffic cone", "forklift"]
+    assert backend.model.kwargs["device"] == "cpu"
+    assert backend.model.kwargs["imgsz"] == 640
 
 
 def test_dfine_adapter_converts_postprocessed_result_to_detections():
