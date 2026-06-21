@@ -5,11 +5,16 @@ from typing import List
 import numpy as np
 
 from .base import BaseDetectorBackend
-from ..types import Detection
+from ..types import BackendConfig, Detection
 
 
 class FakeBackend(BaseDetectorBackend):
     """Dependency-free backend for CLI/ROS plumbing tests."""
+
+    def __init__(self, config: BackendConfig, *, autoload: bool = True) -> None:
+        super().__init__(config)
+        if autoload:
+            self.load()
 
     def infer(self, image_bgr: np.ndarray) -> List[Detection]:
         self.require_loaded()

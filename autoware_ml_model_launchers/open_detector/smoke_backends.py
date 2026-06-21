@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
-import time
 import traceback
 from pathlib import Path
 from typing import Dict, List
@@ -14,12 +12,12 @@ from .drawing import draw_detections
 from .filtering import (
     DEFAULT_DRIVING_CLASS_FILTER,
     DEFAULT_DRIVING_LABEL_MAP,
-    apply_filter_and_mapping,
     parse_class_filter,
     parse_label_map,
 )
 from .image_io import read_image_bgr, write_image_bgr
 from .make_test_image import make_image
+from .runtime import OpenDetectorRuntime, TimingStats
 from .types import BackendConfig, detections_to_dicts
 
 
@@ -84,13 +82,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def _timing_payload(values_ms: List[float]) -> dict:
-    return {
-        "runs": len(values_ms),
-        "mean": statistics.mean(values_ms) if values_ms else None,
-        "median": statistics.median(values_ms) if values_ms else None,
-        "min": min(values_ms) if values_ms else None,
-        "max": max(values_ms) if values_ms else None,
-    }
+    return TimingStats.from_values(values_ms).to_dict()
 
 
 def _run_backend(name: str, image, args, label_map: Dict[str, str], class_filter: set[str], model: str) -> dict:
@@ -104,7 +96,7 @@ def _run_backend(name: str, image, args, label_map: Dict[str, str], class_filter
         max_det=args.max_det,
         half=args.half,
     )
-    result = {
+    report = {
         "backend": name,
         "model": model or "<backend-default>",
         "status": "ok",
@@ -119,29 +111,29 @@ def _run_backend(name: str, image, args, label_map: Dict[str, str], class_filter
 
     try:
         backend = create_backend(config)
+        runtime = OpenDetectorRuntime(
+            backend,
+            class_filter=class_filter,
+            label_map=label_map,
+            max_det=args.max_det,
+        )
 
-        raw = []
+        last_result = None
         timings_ms: List[float] = []
         total_runs = max(1, args.repeat) + max(0, args.warmup)
         for index in range(total_runs):
-            start = time.perf_counter()
-            raw = backend.infer(image)
-            elapsed_ms = (time.perf_counter() - start) * 1000.0
+            runtime_result = runtime.update(image)
             if index >= args.warmup:
-                timings_ms.append(elapsed_ms)
+                timings_ms.append(runtime_result.infer_ms)
+            last_result = runtime_result
+        if last_result is None:
+            raise RuntimeError("Detector did not run")
 
-        height, width = image.shape[:2]
-        processed = apply_filter_and_mapping(
-            [det.clipped((height, width)) for det in raw],
-            class_filter=class_filter,
-            label_map=label_map,
-            min_score=0.0,
-            max_det=args.max_det,
-        )
-        result.update(
+        processed = last_result.detections
+        report.update(
             {
                 "timing_ms": _timing_payload(timings_ms),
-                "num_raw_detections": len(raw),
+                "num_raw_detections": len(last_result.raw_detections),
                 "num_output_detections": len(processed),
                 "labels": sorted({det.label for det in processed}),
                 "detections": detections_to_dicts(processed),
@@ -153,15 +145,15 @@ def _run_backend(name: str, image, args, label_map: Dict[str, str], class_filter
             output_dir.mkdir(parents=True, exist_ok=True)
             write_image_bgr(output_dir / f"{name}.jpg", draw_detections(image, processed))
     except ImportError as exc:
-        result.update({"status": "missing_dependency", "error_type": type(exc).__name__, "error": str(exc)})
+        report.update({"status": "missing_dependency", "error_type": type(exc).__name__, "error": str(exc)})
         if args.traceback:
-            result["traceback"] = traceback.format_exc()
+            report["traceback"] = traceback.format_exc()
     except Exception as exc:
-        result.update({"status": "error", "error_type": type(exc).__name__, "error": str(exc)})
+        report.update({"status": "error", "error_type": type(exc).__name__, "error": str(exc)})
         if args.traceback:
-            result["traceback"] = traceback.format_exc()
+            report["traceback"] = traceback.format_exc()
 
-    return result
+    return report
 
 
 def main(argv: List[str] | None = None) -> int:
