@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
-import time
 from pathlib import Path
 from typing import List
 
@@ -13,11 +11,11 @@ from .drawing import draw_detections
 from .filtering import (
     DEFAULT_DRIVING_CLASS_FILTER,
     DEFAULT_DRIVING_LABEL_MAP,
-    apply_filter_and_mapping,
     parse_class_filter,
     parse_label_map,
 )
 from .image_io import read_image_bgr, write_image_bgr
+from .runtime import OpenDetectorRuntime, TimingStats
 from .types import BackendConfig, detections_to_dicts
 
 
@@ -64,26 +62,26 @@ def main(argv: List[str] | None = None) -> None:
         half=args.half,
     )
     backend = create_backend(config)
+    runtime = OpenDetectorRuntime(
+        backend,
+        class_filter=class_filter,
+        label_map=label_map,
+        max_det=args.max_det,
+    )
 
-    last = []
+    last_result = None
     timings_ms: List[float] = []
     total_runs = max(1, args.repeat) + max(0, args.warmup)
     for i in range(total_runs):
-        t0 = time.perf_counter()
-        raw = backend.infer(image)
-        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        result = runtime.update(image)
         if i >= args.warmup:
-            timings_ms.append(elapsed_ms)
-        last = raw
+            timings_ms.append(result.infer_ms)
+        last_result = result
+    if last_result is None:
+        raise RuntimeError("Detector did not run")
 
-    height, width = image.shape[:2]
-    processed = apply_filter_and_mapping(
-        [d.clipped((height, width)) for d in last],
-        class_filter=class_filter,
-        label_map=label_map,
-        min_score=0.0,
-        max_det=args.max_det,
-    )
+    height, width = last_result.image_size_hw
+    processed = last_result.detections
 
     if args.output:
         drawn = draw_detections(image, processed)
@@ -94,15 +92,9 @@ def main(argv: List[str] | None = None) -> None:
         "backend": args.backend,
         "model": args.model or "<backend-default>",
         "image_size_hw": [int(height), int(width)],
-        "num_raw_detections": len(last),
+        "num_raw_detections": len(last_result.raw_detections),
         "num_output_detections": len(processed),
-        "timing_ms": {
-            "runs": len(timings_ms),
-            "mean": statistics.mean(timings_ms) if timings_ms else None,
-            "median": statistics.median(timings_ms) if timings_ms else None,
-            "min": min(timings_ms) if timings_ms else None,
-            "max": max(timings_ms) if timings_ms else None,
-        },
+        "timing_ms": TimingStats.from_values(timings_ms).to_dict(),
         "detections": detections_to_dicts(processed),
     }
 

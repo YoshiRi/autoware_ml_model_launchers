@@ -3,6 +3,7 @@ import numpy as np
 from autoware_ml_model_launchers.open_detector.backends.dfine_backend import DFineBackend
 from autoware_ml_model_launchers.open_detector.backends.rfdetr_backend import RFDetrBackend
 from autoware_ml_model_launchers.open_detector.backends.ultralytics_backend import UltralyticsYoloBackend
+from autoware_ml_model_launchers.open_detector.backend_loader import create_backend
 from autoware_ml_model_launchers.open_detector.types import BackendConfig
 
 
@@ -50,7 +51,8 @@ def test_ultralytics_adapter_converts_model_result_to_detections():
             return [Result()]
 
     backend = UltralyticsYoloBackend(
-        BackendConfig(backend="ultralytics", device="0", imgsz=960, max_det=10)
+        BackendConfig(backend="ultralytics", device="0", imgsz=960, max_det=10),
+        autoload=False,
     )
     backend.model = Model()
     backend.names = backend.model.names
@@ -113,7 +115,9 @@ def test_dfine_adapter_converts_postprocessed_result_to_detections():
             self.inputs = inputs
             return {"ok": True}
 
-    backend = DFineBackend(BackendConfig(backend="dfine", conf_thres=0.4, max_det=10))
+    backend = DFineBackend(
+        BackendConfig(backend="dfine", conf_thres=0.4, max_det=10), autoload=False
+    )
     backend.torch = Torch()
     backend.Image = ImageFactory()
     backend.processor = Processor()
@@ -150,7 +154,9 @@ def test_rfdetr_adapter_converts_prediction_result_to_detections():
             self.threshold = threshold
             return Prediction()
 
-    backend = RFDetrBackend(BackendConfig(backend="rfdetr", conf_thres=0.33, max_det=10))
+    backend = RFDetrBackend(
+        BackendConfig(backend="rfdetr", conf_thres=0.33, max_det=10), autoload=False
+    )
     backend.Image = ImageFactory()
     backend.model = Model()
     backend.coco_classes = {2: "truck"}
@@ -165,3 +171,15 @@ def test_rfdetr_adapter_converts_prediction_result_to_detections():
     assert detections[0].score == 0.7
     assert detections[0].height == 30.0
     assert backend.model.threshold == 0.33
+
+
+def test_create_backend_loads_selected_backend_during_construction():
+    backend = create_backend(BackendConfig(backend="fake"))
+
+    assert backend.loaded is True
+
+
+def test_create_backend_can_skip_loading_for_adapter_tests():
+    backend = create_backend(BackendConfig(backend="fake"), load=False)
+
+    assert backend.loaded is False

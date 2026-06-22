@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from .base import BaseDetectorBackend
-from ..types import Detection
+from ..types import BackendConfig, Detection
 
 
 class RFDetrBackend(BaseDetectorBackend):
@@ -19,6 +19,11 @@ class RFDetrBackend(BaseDetectorBackend):
     """
 
     DEFAULT_MODEL = "small"
+
+    def __init__(self, config: BackendConfig, *, autoload: bool = True) -> None:
+        super().__init__(config)
+        if autoload:
+            self.load()
 
     def load(self) -> None:
         try:

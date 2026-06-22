@@ -190,7 +190,9 @@ drop-in replacement.
 The ROS adapters are included in this repository. Heavy Python runtimes and model weights remain
 external. The selected backend loads its model while the ROS node starts, so dependency or model
 errors are reported before the node becomes ready. Review
-[`docs/open_yolo_design.md`](docs/open_yolo_design.md) before redistribution or product use.
+[`docs/open_yolo_design.md`](docs/open_yolo_design.md) before redistribution or product use. The
+ROS/core dependency split and extension plan are tracked in
+[`docs/open_detector_architecture.md`](docs/open_detector_architecture.md).
 
 Install common ROS dependencies:
 
@@ -299,6 +301,71 @@ ros2 run autoware_ml_model_launchers open_detector_smoke \
 
 `infer_ms` measures each backend adapter's complete inference call, which can include preprocessing
 and postprocessing. It must not be compared directly with an inference-only TensorRT metric.
+
+### macOS local smoke checks
+
+The open detector and reusable tracker cores can be checked on macOS without ROS 2 or Autoware by
+using the pure Python CLIs. This is useful for validating backend dependencies, model downloads, and
+adapter behavior before running the ROS launchers on Linux.
+
+From this repository root:
+
+```bash
+python3.11 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install -r requirements-open-detector-common.txt pytest
+```
+
+Use Python 3.10 or newer for D-FINE and RF-DETR. The macOS system Python 3.9 can run the fake and
+Ultralytics paths, but current `transformers` and `rfdetr` releases used by this package require
+Python 3.10 or newer.
+
+Run the dependency-free detector and tracker paths:
+
+```bash
+.venv/bin/python -m autoware_ml_model_launchers.open_detector.smoke_backends \
+  --backends fake \
+  --fail-on-error
+
+.venv/bin/python -m autoware_ml_model_launchers.open_tracker.tools_run_tracker_sequence \
+  --input samples/simple_sequence.json \
+  --output /tmp/open_tracker_sequence.json
+```
+
+To test the Ultralytics backend on CPU:
+
+```bash
+.venv/bin/python -m pip install -r requirements-open-yolo.txt
+.venv/bin/python -m autoware_ml_model_launchers.open_detector.smoke_backends \
+  --backends ultralytics \
+  --model ultralytics=yolo11n.pt \
+  --device cpu \
+  --class-filter '' \
+  --output-dir /tmp/open_detector_yolo11n_out \
+  --fail-on-error
+```
+
+To test D-FINE or RF-DETR on CPU:
+
+```bash
+.venv/bin/python -m pip install -r requirements-open-detector-dfine.txt
+.venv/bin/python -m autoware_ml_model_launchers.open_detector.smoke_backends \
+  --backends dfine \
+  --device cpu \
+  --class-filter '' \
+  --fail-on-error
+
+.venv/bin/python -m pip install -r requirements-open-detector-rfdetr.txt
+.venv/bin/python -m autoware_ml_model_launchers.open_detector.smoke_backends \
+  --backends rfdetr \
+  --device cpu \
+  --class-filter '' \
+  --fail-on-error
+```
+
+The first Ultralytics, D-FINE, and RF-DETR runs download model weights. RF-DETR `small` currently
+downloads about 368 MB under `~/.roboflow/models`. The generated `.venv*/`, `.pytest_cache/`, and
+`*.pt` files are ignored by Git.
 
 ## Reusable Python ROI tracker
 

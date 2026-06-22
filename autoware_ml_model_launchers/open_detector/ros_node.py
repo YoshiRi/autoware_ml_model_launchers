@@ -22,11 +22,11 @@ from .drawing import draw_detections
 from .filtering import (
     DEFAULT_DRIVING_CLASS_FILTER,
     DEFAULT_DRIVING_LABEL_MAP,
-    apply_filter_and_mapping,
     parse_class_filter,
     parse_label_map,
 )
 from .image_io import decode_compressed_image, encode_jpeg
+from .runtime import OpenDetectorRuntime
 from .types import BackendConfig, Detection
 
 
@@ -144,6 +144,12 @@ class OpenDetectorNode(Node):
             f"Loading detector: backend={backend} model={model or '<backend-default>'}"
         )
         self.backend = create_backend(self.backend_config)
+        self.runtime = OpenDetectorRuntime(
+            self.backend,
+            class_filter=self.class_filter,
+            label_map=self.label_map,
+            max_det=max_det,
+        )
 
         self.infer_lock = threading.Lock()
         self.last_log_time = 0.0
@@ -219,25 +225,13 @@ class OpenDetectorNode(Node):
             self.infer_lock.acquire()
 
         try:
-            t0 = time.perf_counter()
-            raw_dets = self.backend.infer(image_bgr)
-            infer_ms = (time.perf_counter() - t0) * 1000.0
-            self.latency_pub.publish(Float64(data=infer_ms))
+            result = self.runtime.update(image_bgr)
+            self.latency_pub.publish(Float64(data=result.infer_ms))
 
-            height, width = image_bgr.shape[:2]
-            clipped = [d.clipped((height, width)) for d in raw_dets]
-            dets = apply_filter_and_mapping(
-                clipped,
-                class_filter=self.class_filter,
-                label_map=self.label_map,
-                min_score=0.0,
-                max_det=int(self.backend_config.max_det),
-            )
-
-            self.det_pub.publish(self._to_detection_array(dets, header))
+            self.det_pub.publish(self._to_detection_array(result.detections, header))
 
             if self.publish_debug_image or self.publish_debug_compressed:
-                drawn = draw_detections(image_bgr, dets)
+                drawn = draw_detections(image_bgr, result.detections)
                 if self.debug_image_pub is not None:
                     self.debug_image_pub.publish(self._cv2_to_image_msg(drawn, header))
                 if self.debug_compressed_pub is not None:
@@ -249,7 +243,14 @@ class OpenDetectorNode(Node):
                 self.last_log_time = now
                 self.get_logger().info(
                     "frame=%d det=%d raw=%d infer=%.1f ms drops=%d backend_loaded=%s"
-                    % (self.frame_count, len(dets), len(raw_dets), infer_ms, self.drop_count, self.backend.loaded)
+                    % (
+                        self.frame_count,
+                        len(result.detections),
+                        len(result.raw_detections),
+                        result.infer_ms,
+                        self.drop_count,
+                        self.backend.loaded,
+                    )
                 )
         except Exception as exc:
             self.get_logger().error(f"Detector callback failed: {type(exc).__name__}: {exc}")

@@ -5,7 +5,7 @@ from typing import Dict, List, Sequence
 import numpy as np
 
 from .base import BaseDetectorBackend
-from ..types import Detection
+from ..types import BackendConfig, Detection
 
 
 class UltralyticsYoloBackend(BaseDetectorBackend):
@@ -16,6 +16,11 @@ class UltralyticsYoloBackend(BaseDetectorBackend):
     """
 
     DEFAULT_MODEL = "yolo26s.pt"
+
+    def __init__(self, config: BackendConfig, *, autoload: bool = True) -> None:
+        super().__init__(config)
+        if autoload:
+            self.load()
 
     def load(self) -> None:
         try:
