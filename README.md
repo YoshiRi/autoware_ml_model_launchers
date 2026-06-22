@@ -318,6 +318,38 @@ ros2 run autoware_ml_model_launchers open_detector_smoke \
 `infer_ms` measures each backend adapter's complete inference call, which can include preprocessing
 and postprocessing. It must not be compared directly with an inference-only TensorRT metric.
 
+### Open detector image benchmark
+
+Use `open_detector_benchmark_images` to compare open detector backends on one image or an image
+directory without ROS or Autoware. It loads each backend once, runs all selected images, and writes
+`summary.json`, `detections.jsonl`, `failures.jsonl`, `report.md`, and optional annotated images.
+The schema and follow-up UI plan are documented in
+[`docs/open_detector_benchmark_design.md`](docs/open_detector_benchmark_design.md).
+
+Dependency-free check:
+
+```bash
+python -m autoware_ml_model_launchers.open_detector.tools_benchmark_images \
+  --input /path/to/images \
+  --output-dir /tmp/open_detector_benchmark \
+  --backends fake \
+  --default-driving-label-map
+```
+
+YOLO-World prompt comparison:
+
+```bash
+python -m autoware_ml_model_launchers.open_detector.tools_benchmark_images \
+  --input /path/to/images \
+  --output-dir /tmp/open_detector_yolo_world_benchmark \
+  --backends yolo_world \
+  --model yolo_world=yolov8s-world.pt \
+  --device auto \
+  --class-filter '' \
+  --prompt-set road=car,bus,truck,person \
+  --prompt-set workzone='traffic cone,barrier,construction vehicle'
+```
+
 ### macOS local smoke checks
 
 The open detector and reusable tracker cores can be checked on macOS without ROS 2 or Autoware by

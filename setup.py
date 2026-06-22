@@ -38,6 +38,10 @@ setup(
             "compressed_yolo_node = autoware_ml_model_launchers.compressed_yolo_node:main",
             "open_detector_node = autoware_ml_model_launchers.open_detector.ros_node:main",
             "open_detector_image = autoware_ml_model_launchers.open_detector.cli_detect_image:main",
+            (
+                "open_detector_benchmark_images = "
+                "autoware_ml_model_launchers.open_detector.tools_benchmark_images:main"
+            ),
             "open_detector_smoke = autoware_ml_model_launchers.open_detector.smoke_backends:main",
             "reusable_bbox_tracker_node = autoware_ml_model_launchers.open_tracker.reusable_bbox_tracker_node:main",
             "tlr_yolox_roi_adapter = autoware_ml_model_launchers.tlr_yolox_roi_adapter:main",
