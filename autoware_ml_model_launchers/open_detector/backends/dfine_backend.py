@@ -6,13 +6,18 @@ import cv2
 import numpy as np
 
 from .base import BaseDetectorBackend
-from ..types import Detection
+from ..types import BackendConfig, Detection
 
 
 class DFineBackend(BaseDetectorBackend):
     """Hugging Face Transformers D-FINE backend."""
 
     DEFAULT_MODEL = "ustc-community/dfine-small-obj2coco"
+
+    def __init__(self, config: BackendConfig, *, autoload: bool = True) -> None:
+        super().__init__(config)
+        if autoload:
+            self.load()
 
     def load(self) -> None:
         try:
