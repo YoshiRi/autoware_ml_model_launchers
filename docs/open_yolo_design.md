@@ -2,9 +2,9 @@
 
 ## Status
 
-The comparison node supports Ultralytics YOLO, Hugging Face D-FINE, and Roboflow RF-DETR through a
-backend-neutral ROS interface. Model weights and Python machine-learning runtimes are intentionally
-not stored in this repository.
+The comparison node supports Ultralytics YOLO, Ultralytics YOLO-World, Hugging Face D-FINE, and
+Roboflow RF-DETR through a backend-neutral ROS interface. Model weights and Python
+machine-learning runtimes are intentionally not stored in this repository.
 
 ## Goals
 
@@ -29,16 +29,17 @@ The node publishes `vision_msgs/msg/Detection2DArray`. Its output is not a drop-
 Autoware YOLOX because the message schema and class taxonomy differ.
 
 The Ultralytics launcher's default inference size is 960 to match the existing Autoware YOLOX
-comparison configuration. D-FINE and RF-DETR own their preprocessing. The convenience launchers
-default to smaller model variants that are practical on a 6 GB GPU. Explicit local model paths are
-preferred for repeatable and offline runs.
+comparison configuration. YOLO-World adds open-vocabulary class prompts while still returning
+bounding boxes. D-FINE and RF-DETR own their preprocessing. The convenience launchers default to
+smaller model variants that are practical on a 6 GB GPU. Explicit local model paths are preferred
+for repeatable and offline runs.
 
 ## Dependency policy
 
 ROS, OpenCV, and NumPy dependencies are declared in `package.xml`. Heavy backend dependencies are
 split into separate requirements files and imported only by the selected backend:
 
-- Ultralytics: `requirements-open-yolo.txt`
+- Ultralytics and YOLO-World: `requirements-open-yolo.txt`
 - D-FINE: `requirements-open-detector-dfine.txt`
 - RF-DETR: `requirements-open-detector-rfdetr.txt`
 

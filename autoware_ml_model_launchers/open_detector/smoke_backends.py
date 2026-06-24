@@ -14,6 +14,7 @@ from .filtering import (
     DEFAULT_DRIVING_LABEL_MAP,
     parse_class_filter,
     parse_label_map,
+    parse_string_list,
 )
 from .image_io import read_image_bgr, write_image_bgr
 from .make_test_image import make_image
@@ -21,7 +22,7 @@ from .runtime import OpenDetectorRuntime, TimingStats
 from .types import BackendConfig, detections_to_dicts
 
 
-ALL_BACKENDS = ["fake", "ultralytics", "dfine", "rfdetr"]
+ALL_BACKENDS = ["fake", "ultralytics", "yolo_world", "dfine", "rfdetr"]
 
 
 def _parse_backend_list(value: str) -> List[str]:
@@ -57,7 +58,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", "-i", default="", help="Input image path. Empty uses an in-memory synthetic image.")
     p.add_argument("--json", default="", help="Write report JSON to this path instead of stdout.")
     p.add_argument("--output-dir", default="", help="Optional directory for annotated images from successful backends.")
-    p.add_argument("--backends", default="fake", help="Comma list: fake,ultralytics,dfine,rfdetr,yolo,d-fine,rf-detr")
+    p.add_argument(
+        "--backends",
+        default="fake",
+        help="Comma list: fake,ultralytics,yolo_world,dfine,rfdetr,yolo,d-fine,rf-detr",
+    )
     p.add_argument("--all", action="store_true", help="Check fake plus all real backend adapters.")
     p.add_argument(
         "--model",
@@ -73,6 +78,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--half", action="store_true")
     p.add_argument("--class-filter", default=",".join(DEFAULT_DRIVING_CLASS_FILTER))
     p.add_argument("--label-map", default="", help="Comma entries like person=PEDESTRIAN,car=CAR or JSON object")
+    p.add_argument("--prompt-classes", default="", help="Open-vocabulary classes, e.g. car,traffic light")
     p.add_argument("--default-driving-label-map", action="store_true")
     p.add_argument("--repeat", type=int, default=1, help="Timed inference runs per backend")
     p.add_argument("--warmup", type=int, default=0, help="Warmup runs excluded from timing")
@@ -95,6 +101,7 @@ def _run_backend(name: str, image, args, label_map: Dict[str, str], class_filter
         iou_thres=args.iou,
         max_det=args.max_det,
         half=args.half,
+        extra={"classes": parse_string_list(args.prompt_classes)},
     )
     report = {
         "backend": name,

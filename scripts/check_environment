@@ -16,7 +16,7 @@ Usage: check_environment [--pipeline PIPELINE] [--camera CAMERA_NAMESPACE]
 
 PIPELINE is one of: camera, open_detector, open_yolo, bevfusion, ptv3,
                     centerpoint, streampetr.
-DETECTOR_BACKEND is one of: ultralytics, dfine, rfdetr, fake.
+DETECTOR_BACKEND is one of: ultralytics, yolo_world, dfine, rfdetr, fake.
 EOF
 }
 
@@ -84,13 +84,16 @@ case "$detector_backend" in
   yolo|ultralytics_yolo)
     detector_backend="ultralytics"
     ;;
+  world|yolo-world|yoloworld)
+    detector_backend="yolo_world"
+    ;;
   d-fine)
     detector_backend="dfine"
     ;;
   rf-detr)
     detector_backend="rfdetr"
     ;;
-  ultralytics|dfine|rfdetr|fake)
+  ultralytics|yolo_world|dfine|rfdetr|fake)
     ;;
   *)
     printf 'Unknown detector backend: %s\n' "$detector_backend" >&2
@@ -237,6 +240,9 @@ if [[ "$pipeline" == "open_detector" || "$pipeline" == "open_yolo" ]] &&
     case "$detector_backend" in
       ultralytics)
         import_check="$import_check; import ultralytics"
+        ;;
+      yolo_world)
+        import_check="$import_check; import ultralytics, clip"
         ;;
       dfine)
         import_check="$import_check; import torch, torchvision"

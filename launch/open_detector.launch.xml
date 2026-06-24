@@ -17,6 +17,7 @@
   <arg name="iou_thres" default="0.70"/>
   <arg name="max_det" default="100"/>
   <arg name="half" default="false"/>
+  <arg name="prompt_classes" default=""/>
   <arg name="backend_config_json" default="{}"/>
 
   <arg name="class_filter" default="person,bicycle,car,motorcycle,bus,truck,traffic light,stop sign"/>
@@ -46,6 +47,7 @@
     <param name="iou_thres" value="$(var iou_thres)"/>
     <param name="max_det" value="$(var max_det)"/>
     <param name="half" value="$(var half)"/>
+    <param name="prompt_classes" value="$(var prompt_classes)"/>
     <param name="backend_config_json" value="$(var backend_config_json)" type="str"/>
     <param name="class_filter" value="$(var class_filter)"/>
     <param name="label_map" value="$(var label_map)" type="str"/>
