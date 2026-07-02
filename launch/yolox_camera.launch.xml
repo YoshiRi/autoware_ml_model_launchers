@@ -29,6 +29,7 @@
     <arg name="input/image" value="$(var input/image)"/>
     <arg name="output/objects" value="$(var output/objects)"/>
     <arg name="output/mask" value="$(var output/mask)"/>
+    <arg name="yolox_param_path" value="$(find-pkg-share autoware_ml_model_launchers)/config/tensorrt_yolox.param.yaml"/>
     <arg name="model_path" value="$(var model_path)"/>
     <arg name="label_path" value="$(var label_path)"/>
     <arg name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
