@@ -1,25 +1,54 @@
 /**:
   ros__parameters:
-    debug_mode: true
-    max_camera_time_diff: 0.2
-    multithreading: false
-    anchor_camera_id: 0
-    is_compressed_image: true
-    is_distorted_image: true
-
-    model_params:
-      trt_precision: "fp16"
-      use_temporal: true
-      backbone_engine_path: ""
-      head_engine_path: ""
-      position_embedding_engine_path: ""
-      workspace_size: 32
-      pre_memory_length: 1024
-      post_memory_length: 1280
-
-    post_process_params:
-      confidence_threshold: [0.36, 0.39, 0.38, 0.41, 0.43]
-      circle_nms_dist_threshold: 0.0
-      iou_nms_search_distance_2d: 10.0
-      iou_nms_threshold: 0.5
-      yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
+    debug_mode: true # Whether to enable debug mode, which may include additional logging
+    max_camera_time_diff: 0.15 #Maximum allowed time difference for camera image sync in seconds
+    multithreading: false # Whether to use multithreading for handling image callbacks
+    anchor_camera_id: 0 # Camera id of the anchor topic. The forward pass begins once every anchor camera topic reaches.
+    is_compressed_image: false # Whether the input images are compressed
+    is_distorted_image: false # Whether the input images are distorted
+    ego_mask.fill_value_bgr: [0.0, 0.0, 0.0]
+    camera_mask.camera_ids: [8, 6, 10, 7, 9]
+    camera_0_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # points to construct the polygon, [x1, y2, x2, y2, x3, y3...]
+      normalized: false
+    camera_1_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_2_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_3_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_4_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_5_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_6_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_7_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_8_mask:
+      enable: false
+      mask: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      normalized: false
+    camera_9_mask:
+      enable: true
+      mask: [0.8, 0.0, 1.0, 0.0, 1.0, 1.0, 0.8, 1.0]
+      normalized: true
+    camera_10_mask:
+      enable: true
+      mask: [0.0, 0.0, 0.2, 0.0, 0.2, 1.0, 0.0, 1.0]
+      normalized: true
