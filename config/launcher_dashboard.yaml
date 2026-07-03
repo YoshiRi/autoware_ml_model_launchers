@@ -1,0 +1,146 @@
+launchers:
+  yolox_camera:
+    label: YOLOX Camera
+    package: autoware_ml_model_launchers
+    file: yolox_camera.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: false
+      use_sim_time:
+        type: bool
+        default: true
+      build_only:
+        type: bool
+        default: false
+      enable_bytetrack:
+        type: bool
+        default: true
+      enable_bytetrack_visualizer:
+        type: bool
+        default: false
+      model_name:
+        type: string
+        default: yolox-sPlus-T4-960x960-debris.onnx
+      data_path:
+        type: string
+        default: /opt/autoware/mlmodels
+
+  all_single_camera_detection:
+    label: Single Camera Detection
+    package: autoware_ml_model_launchers
+    file: all_single_camera_detection.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: false
+      use_sim_time:
+        type: bool
+        default: true
+      build_only:
+        type: bool
+        default: false
+      enable_yolox:
+        type: bool
+        default: true
+      enable_bytetrack:
+        type: bool
+        default: true
+      enable_bytetrack_visualizer:
+        type: bool
+        default: false
+      enable_tlr:
+        type: bool
+        default: false
+      enable_tlr_classification:
+        type: bool
+        default: false
+      data_path:
+        type: string
+        default: /opt/autoware/mlmodels
+
+  open_yolo:
+    label: Open YOLO
+    package: autoware_ml_model_launchers
+    file: open_yolo.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      input/image:
+        type: string
+        default: /sensing/camera/camera5/image_raw/compressed
+      detector_name:
+        type: string
+        default: open_yolo
+      model:
+        type: string
+        default: yolo11x.pt
+      device:
+        type: string
+        default: "0"
+      publish_debug_image:
+        type: bool
+        default: true
+      publish_debug_compressed:
+        type: bool
+        default: false
+
+  streampetr_x2:
+    label: StreamPETR X2
+    package: autoware_ml_model_launchers
+    file: streampetr_x2.launch.xml
+    args:
+      build_only:
+        type: bool
+        default: false
+      use_sim_time:
+        type: bool
+        default: true
+      is_compressed_image:
+        type: bool
+        default: true
+      is_distorted_image:
+        type: bool
+        default: true
+      output/objects:
+        type: string
+        default: /perception/object_recognition/detection/streampetr/objects3
+
+multi_yolox:
+  launcher_id: yolox_camera
+  cameras:
+    - camera0
+    - camera1
+    - camera2
+    - camera3
+    - camera4
+    - camera5
+    - camera6
+    - camera7
+    - camera8
+    - camera9
+    - camera10
+  args:
+    use_decompress:
+      type: bool
+      default: false
+      group: basic
+    use_sim_time:
+      type: bool
+      default: true
+      group: basic
+    enable_bytetrack:
+      type: bool
+      default: true
+      group: addon
+    enable_bytetrack_visualizer:
+      type: bool
+      default: false
+      group: addon

@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Launcher Dashboard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fa;
+        --panel: #ffffff;
+        --ink: #1d2430;
+        --muted: #667085;
+        --line: #d7dee8;
+        --accent: #0f766e;
+        --accent-dark: #0b5f59;
+        --danger: #b42318;
+        --warn: #a15c07;
+        --soft: #eef3f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 14px 18px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      h2 {
+        font-size: 15px;
+      }
+
+      h3 {
+        font-size: 13px;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: 280px minmax(420px, 1fr) minmax(360px, 460px);
+        gap: 14px;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 14px 18px 24px;
+      }
+
+      .panel {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .center-column {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        min-width: 0;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .stack {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .subsection {
+        display: grid;
+        gap: 12px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .settings-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .settings-group h3 {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .subsection-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .launcher-list {
+        display: grid;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .launcher-item,
+      button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .launcher-item {
+        width: 100%;
+        padding: 8px 10px;
+        text-align: left;
+      }
+
+      .launcher-item.active {
+        border-color: var(--accent);
+        background: #ecfdf7;
+        color: #064e3b;
+      }
+
+      button.primary {
+        border-color: var(--accent-dark);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      button.danger {
+        border-color: #8f1f17;
+        background: var(--danger);
+        color: #fff;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      label {
+        display: grid;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select {
+        width: 100%;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        padding: 0 9px;
+        font: inherit;
+      }
+
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+      }
+
+      .check-row {
+        display: flex;
+        min-height: 32px;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .grid-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .wide-field {
+        grid-column: 1 / -1;
+      }
+
+      .field-block {
+        display: grid;
+        gap: 5px;
+      }
+
+      .path-picker {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .codebox,
+      pre {
+        overflow: auto;
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #101828;
+        color: #eef4ff;
+        padding: 10px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .process-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .process {
+        display: grid;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        background: #fbfcfe;
+      }
+
+      .process.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgb(15 118 110 / 0.12);
+      }
+
+      .process-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        padding: 0 8px;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pill.running {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .pill.exited {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .status-line {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .browser {
+        display: grid;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+
+      .browser[hidden] {
+        display: none;
+      }
+
+      .browser-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .browser-path {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .browser-list {
+        display: grid;
+        max-height: 240px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+
+      .browser-entry {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .browser-entry:last-child {
+        border-bottom: 0;
+      }
+
+      .browser-entry.playable {
+        background: #ecfdf7;
+      }
+
+      .warning {
+        color: var(--warn);
+      }
+
+      @media (max-width: 1180px) {
+        main {
+          grid-template-columns: 240px minmax(0, 1fr);
+        }
+
+        .right {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 760px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        .grid-two {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="bar">
+        <h1>Launcher Dashboard</h1>
+        <div id="status" class="status-line">Loading</div>
+      </div>
+    </header>
+
+    <main>
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>Launchers</h2>
+        </div>
+        <div id="launcherList" class="launcher-list"></div>
+      </aside>
+
+      <div class="center-column">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 id="launcherTitle">Launcher</h2>
+            <span id="launcherFile" class="pill"></span>
+          </div>
+          <div class="stack">
+            <div id="launcherForm" class="grid-two"></div>
+            <div class="actions">
+              <button id="previewBtn">Preview</button>
+              <button id="startBtn" class="primary">Start</button>
+            </div>
+            <pre id="previewBox">Select a launcher.</pre>
+
+            <div class="subsection">
+              <div class="subsection-head">
+                <h2>YOLOX Multi-Camera</h2>
+                <span class="pill">preset</span>
+              </div>
+              <div class="settings-group">
+                <h3>Cameras</h3>
+                <div id="cameraChecks" class="grid-two"></div>
+              </div>
+              <div class="settings-group">
+                <h3>Basic Settings</h3>
+                <div id="multiBasicArgs" class="grid-two"></div>
+              </div>
+              <div class="settings-group">
+                <h3>Add-On Nodes</h3>
+                <div id="multiAddonArgs" class="grid-two"></div>
+              </div>
+              <div class="actions">
+                <button id="startMultiBtn" class="primary">Start Selected</button>
+              </div>
+              <div class="status-line warning" id="multiNote"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Bag Player</h2>
+            <span id="bagState" class="pill">idle</span>
+          </div>
+          <div class="stack">
+            <div class="grid-two">
+              <div class="wide-field field-block">
+                <label for="bagPath">Bag Path</label>
+                <div class="path-picker">
+                  <input id="bagPath" type="text" placeholder="/path/to/rosbag" />
+                  <button id="bagBrowseBtn">Browse</button>
+                </div>
+              </div>
+              <label>
+                Rate
+                <input id="bagRate" type="number" min="0.1" step="0.1" value="1.0" />
+              </label>
+              <label class="check-row">
+                <input id="bagLoop" type="checkbox" />
+                loop
+              </label>
+              <label class="check-row">
+                <input id="bagClock" type="checkbox" />
+                publish /clock
+              </label>
+              <label class="check-row">
+                <input id="bagStartPaused" type="checkbox" />
+                start paused
+              </label>
+            </div>
+            <div class="actions">
+              <button id="bagPlayBtn" class="primary">Play</button>
+              <button id="bagStopBtn" class="danger" disabled>Stop</button>
+              <button id="bagPauseBtn" disabled>Pause</button>
+              <button id="bagResumeBtn" disabled>Resume</button>
+              <button id="bagSlowerBtn" disabled>0.5x</button>
+              <button id="bagFasterBtn" disabled>2x</button>
+              <button id="bagSetRateBtn" disabled>Set Rate</button>
+            </div>
+            <div class="status-line warning" id="bagNote"></div>
+            <div id="bagBrowser" class="browser" hidden>
+              <div class="browser-head">
+                <div id="bagBrowserPath" class="meta browser-path"></div>
+                <button id="bagBrowserUpBtn">Up</button>
+                <button id="bagBrowserCloseBtn">Close</button>
+              </div>
+              <div id="bagBrowserList" class="browser-list"></div>
+            </div>
+            <pre id="bagCommandBox">No bag selected.</pre>
+            <h3>Bag Logs</h3>
+            <pre id="bagLogBox">No bag player started.</pre>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel right">
+        <div class="panel-head">
+          <h2>Processes</h2>
+          <div class="actions">
+            <button id="stopAllBtn" class="danger">Stop All</button>
+            <button id="closeAllBtn">Close All</button>
+          </div>
+        </div>
+        <div class="stack">
+          <div id="processList" class="process-list"></div>
+          <h3>Logs</h3>
+          <pre id="logBox">No process selected.</pre>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const state = {
+        launchers: [],
+        multiYolox: null,
+        selectedLauncherId: null,
+        selectedProcessId: null,
+        bagPlayer: null,
+        bagBrowserEntries: [],
+        bagBrowserParent: null,
+        reportedFailures: new Set(),
+      };
+
+      const statusEl = document.getElementById("status");
+      const launcherListEl = document.getElementById("launcherList");
+      const launcherTitleEl = document.getElementById("launcherTitle");
+      const launcherFileEl = document.getElementById("launcherFile");
+      const launcherFormEl = document.getElementById("launcherForm");
+      const previewBoxEl = document.getElementById("previewBox");
+      const processListEl = document.getElementById("processList");
+      const logBoxEl = document.getElementById("logBox");
+      const cameraChecksEl = document.getElementById("cameraChecks");
+      const multiBasicArgsEl = document.getElementById("multiBasicArgs");
+      const multiAddonArgsEl = document.getElementById("multiAddonArgs");
+      const multiNoteEl = document.getElementById("multiNote");
+      const bagStateEl = document.getElementById("bagState");
+      const bagPathEl = document.getElementById("bagPath");
+      const bagRateEl = document.getElementById("bagRate");
+      const bagLoopEl = document.getElementById("bagLoop");
+      const bagClockEl = document.getElementById("bagClock");
+      const bagStartPausedEl = document.getElementById("bagStartPaused");
+      const bagNoteEl = document.getElementById("bagNote");
+      const bagCommandBoxEl = document.getElementById("bagCommandBox");
+      const bagLogBoxEl = document.getElementById("bagLogBox");
+      const bagPlayBtn = document.getElementById("bagPlayBtn");
+      const bagStopBtn = document.getElementById("bagStopBtn");
+      const bagPauseBtn = document.getElementById("bagPauseBtn");
+      const bagResumeBtn = document.getElementById("bagResumeBtn");
+      const bagSlowerBtn = document.getElementById("bagSlowerBtn");
+      const bagFasterBtn = document.getElementById("bagFasterBtn");
+      const bagSetRateBtn = document.getElementById("bagSetRateBtn");
+      const bagBrowseBtn = document.getElementById("bagBrowseBtn");
+      const bagBrowserEl = document.getElementById("bagBrowser");
+      const bagBrowserPathEl = document.getElementById("bagBrowserPath");
+      const bagBrowserListEl = document.getElementById("bagBrowserList");
+      const bagBrowserUpBtn = document.getElementById("bagBrowserUpBtn");
+      const bagBrowserCloseBtn = document.getElementById("bagBrowserCloseBtn");
+
+      async function request(path, options = {}) {
+        const response = await fetch(path, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || response.statusText);
+        }
+        return payload;
+      }
+
+      function setStatus(text, isError = false) {
+        statusEl.textContent = text;
+        statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (character) => {
+          const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+          return replacements[character];
+        });
+      }
+
+      function selectedLauncher() {
+        return state.launchers.find((item) => item.id === state.selectedLauncherId);
+      }
+
+      function inputId(prefix, name) {
+        return `${prefix}_${name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      }
+
+      function renderInput(prefix, name, spec) {
+        const id = inputId(prefix, name);
+        if (spec.type === "bool") {
+          return `<label class="check-row"><input id="${id}" data-name="${name}" data-type="bool" type="checkbox" ${
+            spec.default ? "checked" : ""
+          } />${name}</label>`;
+        }
+        const inputType = spec.type === "int" || spec.type === "float" ? "number" : "text";
+        return `<label>${name}<input id="${id}" data-name="${name}" data-type="${spec.type}" type="${inputType}" value="${
+          spec.default ?? ""
+        }" /></label>`;
+      }
+
+      function readArgs(container) {
+        const args = {};
+        container.querySelectorAll("[data-name]").forEach((element) => {
+          const name = element.dataset.name;
+          if (element.dataset.type === "bool") {
+            args[name] = element.checked;
+          } else {
+            args[name] = element.value;
+          }
+        });
+        return args;
+      }
+
+      function renderLaunchers() {
+        launcherListEl.innerHTML = state.launchers
+          .map(
+            (launcher) =>
+              `<button class="launcher-item ${
+                launcher.id === state.selectedLauncherId ? "active" : ""
+              }" data-launcher="${launcher.id}">${launcher.label}</button>`
+          )
+          .join("");
+        launcherListEl.querySelectorAll("[data-launcher]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.selectedLauncherId = button.dataset.launcher;
+            renderLaunchers();
+            renderLauncherForm();
+          });
+        });
+      }
+
+      function renderLauncherForm() {
+        const launcher = selectedLauncher();
+        if (!launcher) {
+          launcherTitleEl.textContent = "Launcher";
+          launcherFileEl.textContent = "";
+          launcherFormEl.innerHTML = "";
+          return;
+        }
+        launcherTitleEl.textContent = launcher.label;
+        launcherFileEl.textContent = launcher.file;
+        launcherFormEl.innerHTML = Object.entries(launcher.args)
+          .map(([name, spec]) => renderInput("arg", name, spec))
+          .join("");
+        previewLauncher().catch((error) => setStatus(error.message, true));
+      }
+
+      function renderMultiYolox() {
+        const spec = state.multiYolox;
+        if (!spec) {
+          multiNoteEl.textContent = "No multi-camera preset is configured.";
+          return;
+        }
+        cameraChecksEl.innerHTML = spec.cameras
+          .map(
+            (camera, index) =>
+              `<label class="check-row"><input type="checkbox" data-camera="${camera}" ${
+                camera === "camera5" || index === 0 ? "checked" : ""
+              } />${camera}</label>`
+          )
+          .join("");
+        const basicArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "basic"
+        );
+        const addonArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "addon"
+        );
+        multiBasicArgsEl.innerHTML = basicArgs
+          .map(([name, argSpec]) => renderInput("multi_basic", name, argSpec))
+          .join("");
+        multiAddonArgsEl.innerHTML = addonArgs
+          .map(([name, argSpec]) => renderInput("multi_addon", name, argSpec))
+          .join("");
+        multiNoteEl.textContent = "Use decompress only when raw image topics are unavailable.";
+      }
+
+      function readBagOptions() {
+        return {
+          bag_path: bagPathEl.value.trim(),
+          rate: Number(bagRateEl.value || 1),
+          loop: bagLoopEl.checked,
+          clock: bagClockEl.checked,
+          start_paused: bagStartPausedEl.checked,
+        };
+      }
+
+      function previewBagCommand() {
+        const options = readBagOptions();
+        const command = ["ros2", "bag", "play"];
+        if (options.bag_path) {
+          command.push(options.bag_path);
+        }
+        command.push("--disable-keyboard-controls");
+        command.push("--rate", String(options.rate || 1));
+        if (options.loop) {
+          command.push("--loop");
+        }
+        if (options.clock) {
+          command.push("--clock");
+        }
+        if (options.start_paused) {
+          command.push("--start-paused");
+        }
+        bagCommandBoxEl.textContent = options.bag_path ? command.join(" ") : "No bag selected.";
+      }
+
+      function renderBagBrowserEntries() {
+        bagBrowserListEl.innerHTML = state.bagBrowserEntries.length
+          ? state.bagBrowserEntries
+              .map((entry, index) => {
+                const actions = [];
+                if (entry.kind === "directory") {
+                  actions.push(`<button data-bag-open="${index}">Open</button>`);
+                }
+                if (entry.playable) {
+                  actions.push(`<button class="primary" data-bag-use="${index}">Use</button>`);
+                }
+                return `<div class="browser-entry ${entry.playable ? "playable" : ""}">
+                  <div>
+                    <strong>${escapeHtml(entry.name)}</strong>
+                    <div class="meta">${escapeHtml(entry.kind)}${
+                      entry.playable ? " playable" : ""
+                    }</div>
+                  </div>
+                  <div class="actions">${actions.join("")}</div>
+                </div>`;
+              })
+              .join("")
+          : `<div class="status-line">No entries.</div>`;
+
+        bagBrowserListEl.querySelectorAll("[data-bag-open]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const entry = state.bagBrowserEntries[Number(button.dataset.bagOpen)];
+            browseBagPath(entry.path).catch((error) => setStatus(error.message, true));
+          });
+        });
+        bagBrowserListEl.querySelectorAll("[data-bag-use]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const entry = state.bagBrowserEntries[Number(button.dataset.bagUse)];
+            bagPathEl.value = entry.path;
+            previewBagCommand();
+            bagBrowserEl.hidden = true;
+            setStatus(`Selected bag path: ${entry.path}`);
+          });
+        });
+      }
+
+      async function browseBagPath(path = null) {
+        const candidatePath = path || bagPathEl.value.trim();
+        const query = candidatePath ? `?path=${encodeURIComponent(candidatePath)}` : "";
+        const result = await request(`/api/bag/browse${query}`);
+        state.bagBrowserEntries = result.entries;
+        state.bagBrowserParent = result.parent;
+        bagBrowserPathEl.textContent = result.path;
+        bagBrowserUpBtn.disabled = !result.parent;
+        bagBrowserEl.hidden = false;
+        renderBagBrowserEntries();
+      }
+
+      function renderBagPlayer() {
+        const player = state.bagPlayer || {};
+        const running = Boolean(player.running);
+        const hasPlayer = Boolean(player.id);
+        const controls = player.controls || {};
+        const serviceNames = player.service_names || {};
+        const serviceCount = Object.keys(serviceNames).length;
+
+        bagStateEl.textContent = running ? "running" : hasPlayer ? `exit ${player.returncode}` : "idle";
+        if (!hasPlayer && serviceCount > 0) {
+          bagStateEl.textContent = "external";
+        }
+        bagStateEl.className = `pill ${
+          running || (!hasPlayer && serviceCount > 0) ? "running" : hasPlayer ? "exited" : ""
+        }`;
+        bagStopBtn.disabled = !running;
+        bagPauseBtn.disabled = !controls.pause;
+        bagResumeBtn.disabled = !controls.resume;
+        bagSetRateBtn.disabled = !controls.set_rate;
+        bagSlowerBtn.disabled = !controls.set_rate;
+        bagFasterBtn.disabled = !controls.set_rate;
+
+        if (player.command) {
+          bagCommandBoxEl.textContent = player.command.join(" ");
+        } else {
+          previewBagCommand();
+        }
+
+        if (!running && !hasPlayer && serviceCount === 0) {
+          bagNoteEl.textContent = "Start playback or run a rosbag player to enable service controls.";
+        } else if (!running && !hasPlayer) {
+          bagNoteEl.textContent = `${serviceCount} external rosbag control service(s) detected.`;
+        } else if (running && serviceCount === 0) {
+          bagNoteEl.textContent =
+            "Playback is running; pause/resume/rate controls are unavailable in this ROS graph.";
+        } else if (running) {
+          bagNoteEl.textContent = `${serviceCount} rosbag control service(s) detected.`;
+        } else {
+          bagNoteEl.textContent = "Playback has exited; check bag logs for details.";
+        }
+      }
+
+      async function previewLauncher() {
+        const launcher = selectedLauncher();
+        if (!launcher) {
+          return;
+        }
+        const payload = {
+          launcher_id: launcher.id,
+          args: readArgs(launcherFormEl),
+        };
+        const result = await request("/api/preview", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        previewBoxEl.textContent = result.command.join(" ");
+      }
+
+      async function startLauncher() {
+        const launcher = selectedLauncher();
+        if (!launcher) {
+          return;
+        }
+        const result = await request("/api/start", {
+          method: "POST",
+          body: JSON.stringify({
+            launcher_id: launcher.id,
+            args: readArgs(launcherFormEl),
+          }),
+        });
+        state.selectedProcessId = result.process.id;
+        setStatus(`Started ${result.process.label}; showing logs`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function startMultiYolox() {
+        const cameras = Array.from(cameraChecksEl.querySelectorAll("[data-camera]:checked")).map(
+          (item) => item.dataset.camera
+        );
+        const result = await request("/api/start_multi_yolox", {
+          method: "POST",
+          body: JSON.stringify({
+            cameras,
+            args: {
+              ...readArgs(multiBasicArgsEl),
+              ...readArgs(multiAddonArgsEl),
+            },
+          }),
+        });
+        if (result.processes.length > 0) {
+          state.selectedProcessId = result.processes[0].id;
+        }
+        setStatus(`Started ${cameras.length} camera launcher(s); showing first log`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function stopProcess(id) {
+        await request("/api/stop", {
+          method: "POST",
+          body: JSON.stringify({ id }),
+        });
+        await refreshProcesses();
+      }
+
+      async function stopAll() {
+        await request("/api/stop_all", { method: "POST", body: JSON.stringify({}) });
+        await refreshProcesses();
+      }
+
+      async function closeProcess(id) {
+        await request("/api/close", {
+          method: "POST",
+          body: JSON.stringify({ id }),
+        });
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function closeAll() {
+        const result = await request("/api/close_all", { method: "POST", body: JSON.stringify({}) });
+        if (result.processes.length > 0) {
+          setStatus(`Closed ${result.processes.length} exited process(es)`);
+        } else {
+          setStatus("No exited processes to close");
+        }
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function startBag() {
+        const options = readBagOptions();
+        if (!options.bag_path) {
+          throw new Error("Bag path is required");
+        }
+        const result = await request("/api/bag/start", {
+          method: "POST",
+          body: JSON.stringify(options),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Started bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function stopBag() {
+        const result = await request("/api/bag/stop", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Stopped bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function pauseBag() {
+        const result = await request("/api/bag/pause", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Paused bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function resumeBag() {
+        const result = await request("/api/bag/resume", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Resumed bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function setBagRate(rate) {
+        bagRateEl.value = String(rate);
+        const result = await request("/api/bag/set_rate", {
+          method: "POST",
+          body: JSON.stringify({ rate }),
+        });
+        state.bagPlayer = result.player;
+        setStatus(`Set bag rate to ${rate}x`);
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function refreshBagStatus() {
+        const result = await request("/api/bag/status");
+        state.bagPlayer = result.player;
+        renderBagPlayer();
+      }
+
+      async function refreshBagLogs() {
+        const result = await request("/api/bag/logs?lines=120");
+        bagLogBoxEl.textContent = result.text || "No bag log output yet.";
+      }
+
+      async function refreshProcesses() {
+        const result = await request("/api/processes");
+        const selectedExists = result.processes.some((process) => process.id === state.selectedProcessId);
+        if (!selectedExists) {
+          state.selectedProcessId = result.processes[0]?.id || null;
+        }
+
+        const failed = result.processes.find(
+          (process) =>
+            process.returncode !== null &&
+            process.returncode !== 0 &&
+            !state.reportedFailures.has(process.id)
+        );
+        if (failed) {
+          state.reportedFailures.add(failed.id);
+          state.selectedProcessId = failed.id;
+          setStatus(`${failed.label} exited with code ${failed.returncode}; showing logs`, true);
+        }
+
+        processListEl.innerHTML = result.processes.length
+          ? result.processes.map(renderProcess).join("")
+          : `<div class="status-line">No managed processes.</div>`;
+        processListEl.querySelectorAll("[data-stop]").forEach((button) => {
+          button.addEventListener("click", () => stopProcess(button.dataset.stop));
+        });
+        processListEl.querySelectorAll("[data-close]").forEach((button) => {
+          button.addEventListener("click", () => closeProcess(button.dataset.close));
+        });
+        processListEl.querySelectorAll("[data-log]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            state.selectedProcessId = button.dataset.log;
+            await refreshLogs();
+          });
+        });
+        if (failed) {
+          await refreshLogs();
+        }
+      }
+
+      function renderProcess(process) {
+        const stateClass = process.running ? "running" : "exited";
+        const stateText = process.running ? "running" : `exit ${process.returncode}`;
+        return `<div class="process ${process.id === state.selectedProcessId ? "selected" : ""}">
+          <div class="process-top">
+            <div>
+              <strong>${process.label}</strong>
+              <div class="meta">${process.id} pid=${process.pid} log=${process.log_path}</div>
+            </div>
+            <span class="pill ${stateClass}">${stateText}</span>
+          </div>
+          <div class="codebox">${process.command.join(" ")}</div>
+          <div class="actions">
+            <button data-log="${process.id}">Logs</button>
+            <button class="danger" data-stop="${process.id}" ${process.running ? "" : "disabled"}>
+              Stop
+            </button>
+            <button data-close="${process.id}" ${process.running ? "disabled" : ""}>Close</button>
+          </div>
+        </div>`;
+      }
+
+      async function refreshLogs() {
+        if (!state.selectedProcessId) {
+          logBoxEl.textContent = "No process selected.";
+          return;
+        }
+        const result = await request(`/api/logs?id=${state.selectedProcessId}&lines=200`);
+        logBoxEl.textContent = result.text || "No log output yet.";
+      }
+
+      async function init() {
+        try {
+          const registry = await request("/api/launchers");
+          state.launchers = registry.launchers;
+          state.multiYolox = registry.multi_yolox;
+          state.selectedLauncherId = state.launchers[0]?.id || null;
+          renderLaunchers();
+          renderLauncherForm();
+          renderMultiYolox();
+          renderBagPlayer();
+          await refreshProcesses();
+          await refreshBagStatus();
+          await refreshBagLogs();
+          setStatus("Ready");
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      }
+
+      document.getElementById("previewBtn").addEventListener("click", () => {
+        previewLauncher().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startBtn").addEventListener("click", () => {
+        startLauncher().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startMultiBtn").addEventListener("click", () => {
+        startMultiYolox().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("stopAllBtn").addEventListener("click", () => {
+        stopAll().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("closeAllBtn").addEventListener("click", () => {
+        closeAll().catch((error) => setStatus(error.message, true));
+      });
+      bagPlayBtn.addEventListener("click", () => {
+        startBag().catch((error) => setStatus(error.message, true));
+      });
+      bagStopBtn.addEventListener("click", () => {
+        stopBag().catch((error) => setStatus(error.message, true));
+      });
+      bagPauseBtn.addEventListener("click", () => {
+        pauseBag().catch((error) => setStatus(error.message, true));
+      });
+      bagResumeBtn.addEventListener("click", () => {
+        resumeBag().catch((error) => setStatus(error.message, true));
+      });
+      bagSetRateBtn.addEventListener("click", () => {
+        setBagRate(Number(bagRateEl.value || 1)).catch((error) => setStatus(error.message, true));
+      });
+      bagBrowseBtn.addEventListener("click", () => {
+        browseBagPath().catch((error) => setStatus(error.message, true));
+      });
+      bagBrowserUpBtn.addEventListener("click", () => {
+        if (state.bagBrowserParent) {
+          browseBagPath(state.bagBrowserParent).catch((error) => setStatus(error.message, true));
+        }
+      });
+      bagBrowserCloseBtn.addEventListener("click", () => {
+        bagBrowserEl.hidden = true;
+      });
+      bagSlowerBtn.addEventListener("click", () => {
+        const nextRate = Math.max(0.1, Number(bagRateEl.value || 1) * 0.5);
+        setBagRate(Number(nextRate.toFixed(3))).catch((error) => setStatus(error.message, true));
+      });
+      bagFasterBtn.addEventListener("click", () => {
+        const nextRate = Number(bagRateEl.value || 1) * 2.0;
+        setBagRate(Number(nextRate.toFixed(3))).catch((error) => setStatus(error.message, true));
+      });
+      [bagPathEl, bagRateEl, bagLoopEl, bagClockEl, bagStartPausedEl].forEach((element) => {
+        element.addEventListener("input", previewBagCommand);
+        element.addEventListener("change", previewBagCommand);
+      });
+
+      window.setInterval(() => {
+        refreshProcesses().catch(() => {});
+        refreshLogs().catch(() => {});
+        refreshBagStatus().catch(() => {});
+        refreshBagLogs().catch(() => {});
+      }, 2000);
+
+      init();
+    </script>
+  </body>
+</html>

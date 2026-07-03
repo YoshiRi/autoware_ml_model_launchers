@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <build_depend>ament_cmake_python</build_depend>
 
+  <exec_depend>ament_index_python</exec_depend>
   <exec_depend>autoware_bytetrack</exec_depend>
   <exec_depend>autoware_bevfusion</exec_depend>
   <exec_depend>autoware_camera_streampetr</exec_depend>

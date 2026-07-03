@@ -1,0 +1,257 @@
+# Launcher Dashboard Design
+
+## Goal
+
+Provide a local web UI that starts and stops selected ROS launch files without
+requiring users to memorize long `ros2 launch` commands. The first useful flow is
+multi-camera YOLOX startup, but the implementation should remain a generic
+launcher dashboard.
+
+The dashboard runs locally:
+
+```bash
+ros2 run autoware_ml_model_launchers launcher_dashboard_ui
+```
+
+Then the operator opens:
+
+```text
+http://127.0.0.1:8766/
+```
+
+## Initial Scope
+
+- Load a launcher registry from YAML.
+- Render registered launch files and their editable arguments.
+- Start a registered launcher as a child `ros2 launch` process.
+- Stop one process or all processes.
+- Show process state, command preview, and log tail.
+- Provide a YOLOX multi-camera form that starts one `yolox_camera.launch.xml`
+  process per selected camera.
+- Provide a separate rosbag player panel for bag playback, stop, log visibility,
+  and service-backed pause/resume/rate controls when available.
+
+Out of scope for the first implementation:
+
+- Authentication and remote access.
+- Editing arbitrary launch files from the UI.
+- ROS graph visualization beyond process/log status.
+- Persistent process supervision after the UI server exits.
+
+## Architecture
+
+```text
+Browser
+  |
+  | HTTP JSON API
+  v
+launcher_dashboard.ui_server
+  |
+  +-- registry.py          Loads config/launcher_dashboard.yaml
+  +-- process_manager.py   Builds ros2 launch commands and manages subprocesses
+  +-- bag_player.py        Starts ros2 bag play and detects control services
+  +-- static/index.html    Single-page UI
+```
+
+The UI server is intentionally small and uses Python stdlib HTTP primitives, the
+same approach as the parameter snapshot UI. This keeps the tool easy to run in a
+ROS shell without adding a web framework dependency.
+
+## Registry
+
+Launchers are allowlisted in `config/launcher_dashboard.yaml`. The dashboard
+does not parse raw `ros2 launch --show-args` output. Argument forms are generated
+from this registry so the UI can group and label controls intentionally.
+
+Each launcher declares:
+
+- `label`: display name
+- `package`: ROS package passed to `ros2 launch`
+- `file`: launch file passed to `ros2 launch`
+- `args`: editable launch arguments and their type/default value
+
+Argument metadata may include `group`. The first implementation uses it mainly
+for YOLOX multi-camera controls:
+
+- `basic`: runtime basics such as `use_decompress` and `use_sim_time`
+- `addon`: optional nodes such as ByteTrack and visualizers
+
+Example:
+
+```yaml
+launchers:
+  yolox_camera:
+    label: YOLOX Camera
+    package: autoware_ml_model_launchers
+    file: yolox_camera.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: false
+```
+
+The backend rejects launcher IDs and argument names not present in this registry.
+It also builds subprocess commands as argument lists, never through a shell.
+
+## API
+
+- `GET /api/launchers`
+  - Returns the registry.
+- `GET /api/processes`
+  - Returns current child process state.
+- `GET /api/logs?id=<process_id>&lines=200`
+  - Returns a log tail.
+- `POST /api/start`
+  - Body: `{"launcher_id": "...", "args": {...}}`
+  - Starts one registered launcher.
+- `POST /api/start_multi_yolox`
+  - Body: `{"cameras": ["camera5"], "args": {...}}`
+  - Starts `yolox_camera` once per camera.
+- `POST /api/stop`
+  - Body: `{"id": "..."}`
+  - Stops one process.
+- `POST /api/stop_all`
+  - Stops all managed processes.
+- `GET /api/bag/status`
+  - Returns current bag player state and detected control capabilities.
+- `GET /api/bag/logs?lines=200`
+  - Returns a bag playback log tail.
+- `GET /api/bag/browse?path=<directory>`
+  - Lists server-side directories and rosbag-looking entries for path selection.
+- `POST /api/bag/start`
+  - Body: `{"bag_path": "...", "rate": 1.0, "loop": false, "clock": false}`
+  - Starts one managed `ros2 bag play` process.
+- `POST /api/bag/stop`
+  - Stops the managed bag process.
+- `POST /api/bag/pause`
+  - Calls the detected rosbag pause service.
+- `POST /api/bag/resume`
+  - Calls the detected rosbag resume service.
+- `POST /api/bag/set_rate`
+  - Body: `{"rate": 2.0}`
+  - Calls the detected rosbag set-rate service.
+
+## YOLOX Multi-Camera Behavior
+
+The multi-camera form is a convenience layer over the generic launcher start API.
+It has separate UI sections for camera selection, basic settings, and add-on node
+startup settings. For each selected camera it starts:
+
+```bash
+ros2 launch autoware_ml_model_launchers yolox_camera.launch.xml \
+  camera_namespace:=<camera> \
+  use_decompress:=<value> \
+  enable_bytetrack:=<value> \
+  enable_bytetrack_visualizer:=<value>
+```
+
+The default should prefer `use_decompress=false` because decompression can be
+CPU-heavy. Operators can enable it when only compressed image topics are
+available.
+
+## Process Model
+
+Each started launcher receives an in-memory process ID. The process manager keeps:
+
+- launcher ID
+- command arguments
+- start time
+- PID
+- return code
+- log file path
+
+Logs are written under:
+
+```text
+/tmp/autoware_ml_model_launchers/launcher_dashboard/
+```
+
+Stopping a process first sends `terminate()`, waits briefly, then uses `kill()`
+if the process does not exit.
+
+## Rosbag Player Boundary
+
+Rosbag playback is useful for the same operator workflow, but it should not be
+implemented as another launcher entry. It has a different lifecycle and control
+surface from `ros2 launch`: playback can be paused, resumed, rate-controlled,
+seeked, and stopped while publishing data to the ROS graph.
+
+This is implemented as a separate `Bag Player` panel backed by a separate
+manager class. The launcher registry remains responsible only for allowlisted
+launch files. The bag player manager owns:
+
+- starting `ros2 bag play <bag_path>` as a managed child process
+- stopping the bag process group
+- capturing stdout and stderr into the same log area
+- browsing server-side paths without uploading or reading bag contents
+- exposing service-backed controls only when the running ROS 2 rosbag player
+  provides the required services
+
+The first practical increment is intentionally small:
+
+- play a user-provided bag path
+- select a bag path through a server-side path browser
+- stop playback
+- set the initial playback rate before start
+- show the exact command and log tail
+
+The path browser intentionally does not use an HTML file input. Browser file
+dialogs do not expose a reliable full filesystem path to JavaScript, and
+uploading a bag through the browser is unsuitable for 10GB+ rosbag files. The UI
+therefore lists directories on the machine running the dashboard and only checks
+for lightweight rosbag candidates such as directories containing `metadata.yaml`
+or single-file `.mcap`/`.db3` bags. Playback still passes only the selected path
+to `ros2 bag play`.
+
+Runtime controls such as pause, resume, speed up, and speed down are available
+only behind capability detection. The backend scans `ros2 service list -t` and
+uses the `rosbag2_interfaces` services that are actually present in the running
+ROS graph. It does not import ROS 2 rosbag service classes directly, and it does
+not hardcode the player node name; this keeps the UI more tolerant of Humble and
+Jazzy differences. If the required services are not available, the UI disables
+those buttons and shows an explicit unsupported state instead of failing
+silently.
+
+Controls intentionally not included in the first increment:
+
+- seek
+- single-step/play-next
+- burst by message count
+- topic filtering
+- persistent bag path presets
+
+## Error Visibility
+
+The dashboard redirects each child `ros2 launch` process' stdout and stderr to a
+per-process log file and exposes that log in the UI. This is important when a
+launch file changes, an argument is removed, or a package cannot be found: the
+error normally printed by `ros2 launch` should be visible in the dashboard log
+panel, not only in the terminal that started the UI server.
+
+The UI selects the newly started process automatically and shows its log tail.
+If any managed process exits with a non-zero return code, the process list marks
+it as exited and the UI automatically switches the log panel to that failed
+process. Errors that occur before `ros2 launch` is spawned, such as an unknown
+registry argument, are returned by the API and shown in the dashboard status bar.
+
+## Packaging
+
+The dashboard is installed as:
+
+```text
+launcher_dashboard_ui = autoware_ml_model_launchers.launcher_dashboard.ui_server:main
+```
+
+The static HTML is packaged as package data, and the registry YAML is installed
+through the existing `config/*.yaml` data file rule.
+
+## Follow-Up Ideas
+
+- Detect topic health with `ros2 topic info` or native `rclpy`.
+- Add named presets saved to YAML.
+- Add readiness checks for model files and label files.
+- Add a compact camera grid for common vehicle camera sets.
+- Add graceful cleanup on UI server shutdown.
