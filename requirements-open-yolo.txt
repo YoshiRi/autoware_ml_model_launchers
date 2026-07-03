@@ -1,2 +1,4 @@
 -r requirements-open-detector-common.txt
 ultralytics
+# Required by Ultralytics YOLO-World text prompts.
+git+https://github.com/ultralytics/CLIP.git

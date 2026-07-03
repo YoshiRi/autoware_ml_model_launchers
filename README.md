@@ -179,6 +179,7 @@ models while keeping one ROS interface:
 | Launcher | Backend | Default model |
 | --- | --- | --- |
 | `open_yolo.launch.xml` | Ultralytics | `yolo26s.pt`, input size 960 |
+| `open_detector.launch.xml` | Ultralytics YOLO-World | `yolov8s-world.pt` |
 | `open_dfine.launch.xml` | Hugging Face D-FINE | `ustc-community/dfine-small-obj2coco` |
 | `open_rfdetr.launch.xml` | Roboflow RF-DETR | `small` |
 | `open_detector.launch.xml` | Select with `backend:=...` | Backend default |
@@ -210,6 +211,8 @@ python3 -m pip install --upgrade pip
 # Ultralytics
 python3 -m pip install -r \
   "${AUTOWARE_WS}/src/tools/autoware_ml_model_launchers/requirements-open-yolo.txt"
+
+# Ultralytics YOLO-World uses the same requirements file.
 
 # D-FINE
 python3 -m pip install -r \
@@ -279,6 +282,19 @@ ros2 launch autoware_ml_model_launchers open_detector.launch.xml \
   device:=cuda:0
 ```
 
+For YOLO-World open-vocabulary detection, pass prompt classes through `backend_config_json` or the
+CLI `--prompt-classes` option:
+
+```bash
+ros2 launch autoware_ml_model_launchers open_detector.launch.xml \
+  camera_namespace:=camera5 \
+  detector_name:=open_yolo_world \
+  backend:=yolo_world \
+  model:=yolov8s-world.pt \
+  prompt_classes:='traffic cone,forklift,construction vehicle' \
+  class_filter:=''
+```
+
 The Ultralytics backend defaults to `imgsz:=960` to match the Autoware YOLOX input size. D-FINE
 and RF-DETR own their input preprocessing and ignore this setting.
 
@@ -342,6 +358,18 @@ To test the Ultralytics backend on CPU:
   --device cpu \
   --class-filter '' \
   --output-dir /tmp/open_detector_yolo11n_out \
+  --fail-on-error
+```
+
+To test YOLO-World open-vocabulary prompts on CPU:
+
+```bash
+.venv/bin/python -m autoware_ml_model_launchers.open_detector.smoke_backends \
+  --backends yolo_world \
+  --model yolo_world=yolov8s-world.pt \
+  --device cpu \
+  --class-filter '' \
+  --prompt-classes 'car,traffic light,wheel' \
   --fail-on-error
 ```
 
@@ -536,6 +564,7 @@ configuration.
 | CenterPoint | No | Tested | Not tested |
 | StreamPETR X2 | Yes | Tested | Parameters and ONNX load tested; full engine build not completed |
 | Open YOLO | Auto-download or explicit path | Tested | GPU inference and ROS topic round-trip tested |
+| Open YOLO-World | Auto-download or explicit path | Tested | CPU smoke tested with prompt classes |
 | Open D-FINE | Hugging Face or local path | Tested | Adapter and fake ROS plumbing tested |
 | Open RF-DETR | Auto-download or variant | Tested | GPU inference and visualization tested |
 | Reusable Python tracker | None for `simple_iou` | Tested | Both ROS message modes and YOLOX connection tested |

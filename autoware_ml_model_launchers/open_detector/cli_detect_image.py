@@ -13,6 +13,7 @@ from .filtering import (
     DEFAULT_DRIVING_LABEL_MAP,
     parse_class_filter,
     parse_label_map,
+    parse_string_list,
 )
 from .image_io import read_image_bgr, write_image_bgr
 from .runtime import OpenDetectorRuntime, TimingStats
@@ -24,7 +25,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--input", "-i", required=True, help="Input image path")
     p.add_argument("--output", "-o", default="", help="Annotated image output path")
     p.add_argument("--json", default="", help="Detection JSON output path")
-    p.add_argument("--backend", default="ultralytics", choices=["ultralytics", "yolo", "dfine", "rfdetr", "fake"])
+    p.add_argument(
+        "--backend",
+        default="ultralytics",
+        choices=["ultralytics", "yolo", "yolo_world", "yolo-world", "world", "dfine", "rfdetr", "fake"],
+    )
     p.add_argument("--model", default="", help="Model name/path. Empty means backend default.")
     p.add_argument("--device", default="", help="Backend device, e.g. cpu, 0, cuda:0")
     p.add_argument("--imgsz", type=int, default=960)
@@ -34,6 +39,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--half", action="store_true")
     p.add_argument("--class-filter", default=",".join(DEFAULT_DRIVING_CLASS_FILTER), help="Comma list, JSON list, or empty for all")
     p.add_argument("--label-map", default="", help="Comma entries like person=PEDESTRIAN,car=CAR or JSON object")
+    p.add_argument("--prompt-classes", default="", help="Open-vocabulary classes, e.g. car,traffic light")
     p.add_argument("--default-driving-label-map", action="store_true")
     p.add_argument("--repeat", type=int, default=1, help="Run inference N times for simple timing")
     p.add_argument("--warmup", type=int, default=0, help="Warmup runs excluded from timing")
@@ -60,6 +66,7 @@ def main(argv: List[str] | None = None) -> None:
         iou_thres=args.iou,
         max_det=args.max_det,
         half=args.half,
+        extra={"classes": parse_string_list(args.prompt_classes)},
     )
     backend = create_backend(config)
     runtime = OpenDetectorRuntime(

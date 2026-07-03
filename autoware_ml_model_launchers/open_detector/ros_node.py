@@ -24,6 +24,7 @@ from .filtering import (
     DEFAULT_DRIVING_LABEL_MAP,
     parse_class_filter,
     parse_label_map,
+    parse_string_list,
 )
 from .image_io import decode_compressed_image, encode_jpeg
 from .runtime import OpenDetectorRuntime
@@ -58,6 +59,7 @@ class OpenDetectorNode(Node):
         self.declare_parameter("iou_thres", 0.70)
         self.declare_parameter("max_det", 100)
         self.declare_parameter("half", False)
+        self.declare_parameter("prompt_classes", [], dynamic_parameter)
         self.declare_parameter("backend_config_json", "{}")
 
         # Output behavior.
@@ -88,6 +90,9 @@ class OpenDetectorNode(Node):
         max_det = int(self.get_parameter("max_det").value)
         half = bool(self.get_parameter("half").value)
         extra = self._parse_json_object(str(self.get_parameter("backend_config_json").value), "backend_config_json")
+        prompt_classes = parse_string_list(self.get_parameter("prompt_classes").value)
+        if prompt_classes:
+            extra["classes"] = prompt_classes
 
         self.class_filter = parse_class_filter(self.get_parameter("class_filter").value)
         self.label_map = parse_label_map(self.get_parameter("label_map").value)

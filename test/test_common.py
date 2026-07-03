@@ -41,13 +41,14 @@ def test_filter_and_mapping():
 
 def test_backend_alias_and_fake():
     assert canonical_backend_name("yolo") == "ultralytics"
+    assert canonical_backend_name("yolo-world") == "yolo_world"
     backend = create_backend(BackendConfig(backend="fake"))
     assert backend.loaded is True
 
 
 @pytest.mark.parametrize(
     "name",
-    ["ultralytics", "yolo", "dfine", "d-fine", "rfdetr", "rf-detr", "fake"],
+    ["ultralytics", "yolo", "yolo_world", "yolo-world", "dfine", "d-fine", "rfdetr", "rf-detr", "fake"],
 )
 def test_backend_factory_can_skip_loading_for_adapter_tests(name):
     backend = create_backend(BackendConfig(backend=name), load=False)
