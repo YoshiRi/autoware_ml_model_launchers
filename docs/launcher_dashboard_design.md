@@ -28,6 +28,8 @@ http://127.0.0.1:8766/
 - Show process state, command preview, and log tail.
 - Provide a YOLOX multi-camera form that starts one `yolox_camera.launch.xml`
   process per selected camera.
+- Provide a TLR validation form that starts only
+  `tlr_detect_and_classifier.launch.xml` for a selected camera.
 - Provide a separate rosbag player panel for bag playback, stop, log visibility,
   and service-backed pause/resume/rate controls when available.
 
@@ -90,7 +92,7 @@ launchers:
         default: camera5
       use_decompress:
         type: bool
-        default: false
+        default: true
 ```
 
 The backend rejects launcher IDs and argument names not present in this registry.
@@ -115,6 +117,11 @@ It also builds subprocess commands as argument lists, never through a shell.
   - Stops one process.
 - `POST /api/stop_all`
   - Stops all managed processes.
+- `POST /api/close`
+  - Body: `{"id": "..."}`
+  - Removes one exited process from the dashboard process list.
+- `POST /api/close_all`
+  - Removes all exited processes from the dashboard process list.
 - `GET /api/bag/status`
   - Returns current bag player state and detected control capabilities.
 - `GET /api/bag/logs?lines=200`
@@ -148,9 +155,30 @@ ros2 launch autoware_ml_model_launchers yolox_camera.launch.xml \
   enable_bytetrack_visualizer:=<value>
 ```
 
-The default should prefer `use_decompress=false` because decompression can be
-CPU-heavy. Operators can enable it when only compressed image topics are
-available.
+The dashboard defaults `use_decompress=true` and `use_sim_time=true` to match the
+launch files' rosbag-oriented defaults.
+
+## TLR Validation Behavior
+
+The TLR validation tab is a focused launcher preset for traffic light recognition
+checks. It starts `tlr_detect_and_classifier.launch.xml` directly instead of
+using `all_single_camera_detection.launch.xml`, so YOLOX object detection and
+ByteTrack are not launched.
+
+For the selected camera it starts:
+
+```bash
+ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
+  camera_namespace:=<camera> \
+  use_decompress:=<value> \
+  use_sim_time:=<value> \
+  enable_classification:=<value> \
+  data_path:=<value>
+```
+
+The tab exposes only the common validation controls. More specialized model and
+topic arguments can still be edited through the generic launcher form after
+selecting `TLR Detection/Classification` in the launcher list.
 
 ## Process Model
 
@@ -171,6 +199,16 @@ Logs are written under:
 
 Stopping a process first sends `terminate()`, waits briefly, then uses `kill()`
 if the process does not exit.
+
+Closed processes are removed only from the dashboard's in-memory process list.
+Their log files remain on disk under the log directory. Closing a running process
+is rejected; it must be stopped first. `Close All` removes only exited processes.
+
+Log API responses are capped to a bounded tail. Even if a launch or bag process
+writes a very large log file, the backend reads at most a fixed byte window from
+the end of the file and returns at most 500 lines. The browser replaces the log
+panel text on refresh instead of appending, so the page does not grow with every
+poll.
 
 ## Rosbag Player Boundary
 

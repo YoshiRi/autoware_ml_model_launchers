@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import os
@@ -11,6 +10,8 @@ import threading
 import time
 import uuid
 from typing import Any
+
+from .process_manager import _tail_file
 
 
 CONTROL_SERVICE_TYPES = {
@@ -173,10 +174,7 @@ class BagPlayerManager:
             player = self._player
         if player is None or not player.log_path.is_file():
             return ""
-        limited_lines: deque[str] = deque(maxlen=max(lines, 1))
-        with player.log_path.open(encoding="utf-8", errors="replace") as stream:
-            limited_lines.extend(stream)
-        return "".join(limited_lines)
+        return _tail_file(player.log_path, lines)
 
     def discover_control_services(self, force: bool = False) -> dict[str, str]:
         now = time.monotonic()

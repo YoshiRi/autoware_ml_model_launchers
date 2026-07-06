@@ -98,18 +98,23 @@ class LauncherSpec:
 
 
 @dataclass(frozen=True)
-class MultiYoloxSpec:
+class CameraLauncherPresetSpec:
     launcher_id: str
     cameras: tuple[str, ...]
     args: dict[str, ArgSpec]
 
     @classmethod
-    def from_mapping(cls, data: dict[str, Any]) -> "MultiYoloxSpec":
+    def from_mapping(
+        cls,
+        data: dict[str, Any],
+        default_launcher_id: str,
+        error_prefix: str,
+    ) -> "CameraLauncherPresetSpec":
         args_data = data.get("args", {})
         if not isinstance(args_data, dict):
-            raise RegistryError("multi_yolox args must be a mapping")
+            raise RegistryError(f"{error_prefix} args must be a mapping")
         return cls(
-            launcher_id=str(data.get("launcher_id", "yolox_camera")),
+            launcher_id=str(data.get("launcher_id", default_launcher_id)),
             cameras=tuple(str(camera) for camera in data.get("cameras", ())),
             args={
                 name: ArgSpec.from_mapping(name, spec if isinstance(spec, dict) else {})
@@ -131,7 +136,8 @@ class MultiYoloxSpec:
 @dataclass(frozen=True)
 class LauncherRegistry:
     launchers: dict[str, LauncherSpec]
-    multi_yolox: MultiYoloxSpec | None = None
+    multi_yolox: CameraLauncherPresetSpec | None = None
+    tlr_validation: CameraLauncherPresetSpec | None = None
 
     def get(self, launcher_id: str) -> LauncherSpec:
         try:
@@ -143,6 +149,7 @@ class LauncherRegistry:
         return {
             "launchers": [spec.to_json() for spec in self.launchers.values()],
             "multi_yolox": self.multi_yolox.to_json() if self.multi_yolox else None,
+            "tlr_validation": self.tlr_validation.to_json() if self.tlr_validation else None,
         }
 
 
@@ -171,11 +178,25 @@ def load_registry(path: Path) -> LauncherRegistry:
     }
     multi_data = data.get("multi_yolox")
     multi_yolox = (
-        MultiYoloxSpec.from_mapping(multi_data)
+        CameraLauncherPresetSpec.from_mapping(multi_data, "yolox_camera", "multi_yolox")
         if isinstance(multi_data, dict)
         else None
     )
-    return LauncherRegistry(launchers=launchers, multi_yolox=multi_yolox)
+    tlr_data = data.get("tlr_validation")
+    tlr_validation = (
+        CameraLauncherPresetSpec.from_mapping(
+            tlr_data,
+            "tlr_detect_and_classifier",
+            "tlr_validation",
+        )
+        if isinstance(tlr_data, dict)
+        else None
+    )
+    return LauncherRegistry(
+        launchers=launchers,
+        multi_yolox=multi_yolox,
+        tlr_validation=tlr_validation,
+    )
 
 
 def default_registry_path() -> Path:

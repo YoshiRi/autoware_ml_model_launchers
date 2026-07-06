@@ -25,6 +25,10 @@ def test_default_registry_builds_yolox_command():
         registry.get("yolox_camera"),
         {"camera_namespace": "camera6", "use_decompress": False},
     )
+    default_command = build_launch_command(
+        registry.get("yolox_camera"),
+        {"camera_namespace": "camera6"},
+    )
 
     assert command[:4] == [
         "ros2",
@@ -34,6 +38,8 @@ def test_default_registry_builds_yolox_command():
     ]
     assert "camera_namespace:=camera6" in command
     assert "use_decompress:=false" in command
+    assert "use_decompress:=true" in default_command
+    assert "use_sim_time:=true" in default_command
 
 
 def test_multi_yolox_registry_exposes_cameras_and_groups():
@@ -42,7 +48,36 @@ def test_multi_yolox_registry_exposes_cameras_and_groups():
 
     assert payload["cameras"][:5] == ["camera0", "camera1", "camera2", "camera3", "camera4"]
     assert payload["args"]["use_decompress"]["group"] == "basic"
+    assert payload["args"]["use_decompress"]["default"] is True
+    assert payload["args"]["use_sim_time"]["default"] is True
     assert payload["args"]["enable_bytetrack"]["group"] == "addon"
+
+
+def test_tlr_validation_registry_builds_command():
+    registry = load_registry(default_registry_path())
+    payload = registry.to_json()["tlr_validation"]
+    command = build_launch_command(
+        registry.get(payload["launcher_id"]),
+        {
+            "camera_namespace": "camera4",
+            "use_decompress": True,
+            "use_sim_time": True,
+            "enable_classification": True,
+        },
+    )
+
+    assert payload["cameras"][:5] == ["camera0", "camera1", "camera2", "camera3", "camera4"]
+    assert payload["args"]["enable_classification"]["group"] == "mode"
+    assert command[:4] == [
+        "ros2",
+        "launch",
+        "autoware_ml_model_launchers",
+        "tlr_detect_and_classifier.launch.xml",
+    ]
+    assert "camera_namespace:=camera4" in command
+    assert "use_decompress:=true" in command
+    assert "use_sim_time:=true" in command
+    assert "enable_classification:=true" in command
 
 
 def test_registry_rejects_unknown_launcher_arg():
@@ -197,6 +232,34 @@ def test_bag_player_manager_start(monkeypatch, tmp_path):
     assert captured["kwargs"]["stderr"] is subprocess.STDOUT
     assert captured["kwargs"]["start_new_session"] is True
     assert manager.tail_log().startswith("$ ros2 bag play ")
+
+
+def test_bag_player_tail_log_caps_requested_lines(monkeypatch, tmp_path):
+    bag_path = tmp_path / "sample_bag"
+    bag_path.mkdir()
+
+    class FakeProcess:
+        pid = 23456
+        returncode = None
+
+        def __init__(self, command, **kwargs):
+            pass
+
+        def poll(self):
+            return self.returncode
+
+    monkeypatch.setattr(bag_player.subprocess, "Popen", FakeProcess)
+
+    manager = BagPlayerManager(log_dir=tmp_path)
+    player = manager.start(str(bag_path))
+    log_path = tmp_path / f"{player['id']}_bag_play.log"
+    log_path.write_text("".join(f"bag-line-{index}\n" for index in range(600)))
+
+    tail = manager.tail_log(lines=1000).splitlines()
+
+    assert len(tail) == 500
+    assert tail[0] == "bag-line-100"
+    assert tail[-1] == "bag-line-599"
 
 
 def test_select_player_services_prefers_rosbag_player_controls():

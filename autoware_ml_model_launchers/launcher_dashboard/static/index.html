@@ -129,6 +129,29 @@
         gap: 10px;
       }
 
+      .tabbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 8px;
+      }
+
+      .tab-button.active {
+        border-color: var(--accent);
+        background: #ecfdf7;
+        color: #064e3b;
+      }
+
+      .tab-panel {
+        display: grid;
+        gap: 12px;
+      }
+
+      .tab-panel[hidden] {
+        display: none;
+      }
+
       .launcher-list {
         display: grid;
         gap: 6px;
@@ -420,25 +443,57 @@
 
             <div class="subsection">
               <div class="subsection-head">
-                <h2>YOLOX Multi-Camera</h2>
-                <span class="pill">preset</span>
+                <h2>Validation Presets</h2>
+                <span class="pill">tabs</span>
               </div>
-              <div class="settings-group">
-                <h3>Cameras</h3>
-                <div id="cameraChecks" class="grid-two"></div>
+              <div class="tabbar">
+                <button id="yoloxTabBtn" class="tab-button active">YOLOX Multi-Camera</button>
+                <button id="tlrTabBtn" class="tab-button">TLR Validation</button>
               </div>
-              <div class="settings-group">
-                <h3>Basic Settings</h3>
-                <div id="multiBasicArgs" class="grid-two"></div>
+
+              <div id="yoloxTabPanel" class="tab-panel">
+                <div class="settings-group">
+                  <h3>Cameras</h3>
+                  <div id="cameraChecks" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Basic Settings</h3>
+                  <div id="multiBasicArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Add-On Nodes</h3>
+                  <div id="multiAddonArgs" class="grid-two"></div>
+                </div>
+                <div class="actions">
+                  <button id="startMultiBtn" class="primary">Start Selected</button>
+                </div>
+                <div class="status-line warning" id="multiNote"></div>
               </div>
-              <div class="settings-group">
-                <h3>Add-On Nodes</h3>
-                <div id="multiAddonArgs" class="grid-two"></div>
+
+              <div id="tlrTabPanel" class="tab-panel" hidden>
+                <div class="settings-group">
+                  <h3>Camera</h3>
+                  <select id="tlrCameraSelect"></select>
+                </div>
+                <div class="settings-group">
+                  <h3>Basic Settings</h3>
+                  <div id="tlrBasicArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Detection / Classification</h3>
+                  <div id="tlrModeArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Model Settings</h3>
+                  <div id="tlrModelArgs" class="grid-two"></div>
+                </div>
+                <div class="actions">
+                  <button id="previewTlrBtn">Preview TLR</button>
+                  <button id="startTlrBtn" class="primary">Start TLR</button>
+                </div>
+                <pre id="tlrPreviewBox">TLR validation is not configured.</pre>
+                <div class="status-line warning" id="tlrNote"></div>
               </div>
-              <div class="actions">
-                <button id="startMultiBtn" class="primary">Start Selected</button>
-              </div>
-              <div class="status-line warning" id="multiNote"></div>
             </div>
           </div>
         </section>
@@ -519,6 +574,8 @@
       const state = {
         launchers: [],
         multiYolox: null,
+        tlrValidation: null,
+        activeValidationTab: "yolox",
         selectedLauncherId: null,
         selectedProcessId: null,
         bagPlayer: null,
@@ -539,6 +596,16 @@
       const multiBasicArgsEl = document.getElementById("multiBasicArgs");
       const multiAddonArgsEl = document.getElementById("multiAddonArgs");
       const multiNoteEl = document.getElementById("multiNote");
+      const yoloxTabBtn = document.getElementById("yoloxTabBtn");
+      const tlrTabBtn = document.getElementById("tlrTabBtn");
+      const yoloxTabPanel = document.getElementById("yoloxTabPanel");
+      const tlrTabPanel = document.getElementById("tlrTabPanel");
+      const tlrCameraSelectEl = document.getElementById("tlrCameraSelect");
+      const tlrBasicArgsEl = document.getElementById("tlrBasicArgs");
+      const tlrModeArgsEl = document.getElementById("tlrModeArgs");
+      const tlrModelArgsEl = document.getElementById("tlrModelArgs");
+      const tlrPreviewBoxEl = document.getElementById("tlrPreviewBox");
+      const tlrNoteEl = document.getElementById("tlrNote");
       const bagStateEl = document.getElementById("bagState");
       const bagPathEl = document.getElementById("bagPath");
       const bagRateEl = document.getElementById("bagRate");
@@ -686,7 +753,69 @@
         multiAddonArgsEl.innerHTML = addonArgs
           .map(([name, argSpec]) => renderInput("multi_addon", name, argSpec))
           .join("");
-        multiNoteEl.textContent = "Use decompress only when raw image topics are unavailable.";
+        multiNoteEl.textContent = "Decompress and sim time are enabled by default.";
+      }
+
+      function switchValidationTab(tabName) {
+        state.activeValidationTab = tabName;
+        renderValidationTabs();
+      }
+
+      function renderValidationTabs() {
+        const isYolox = state.activeValidationTab === "yolox";
+        yoloxTabBtn.classList.toggle("active", isYolox);
+        tlrTabBtn.classList.toggle("active", !isYolox);
+        yoloxTabPanel.hidden = !isYolox;
+        tlrTabPanel.hidden = isYolox;
+      }
+
+      function renderTlrValidation() {
+        const spec = state.tlrValidation;
+        if (!spec) {
+          tlrNoteEl.textContent = "No TLR validation preset is configured.";
+          tlrPreviewBoxEl.textContent = "TLR validation is not configured.";
+          return;
+        }
+
+        tlrCameraSelectEl.innerHTML = spec.cameras
+          .map(
+            (camera) =>
+              `<option value="${camera}" ${camera === "camera5" ? "selected" : ""}>${camera}</option>`
+          )
+          .join("");
+        const basicArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "basic"
+        );
+        const modeArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "mode"
+        );
+        const modelArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "model"
+        );
+        tlrBasicArgsEl.innerHTML = basicArgs
+          .map(([name, argSpec]) => renderInput("tlr_basic", name, argSpec))
+          .join("");
+        tlrModeArgsEl.innerHTML = modeArgs
+          .map(([name, argSpec]) => renderInput("tlr_mode", name, argSpec))
+          .join("");
+        tlrModelArgsEl.innerHTML = modelArgs
+          .map(([name, argSpec]) => renderInput("tlr_model", name, argSpec))
+          .join("");
+        tlrNoteEl.textContent = "TLR only launches detector and optional classifiers.";
+        [tlrCameraSelectEl, tlrBasicArgsEl, tlrModeArgsEl, tlrModelArgsEl].forEach((element) => {
+          element.addEventListener("input", () => previewTlr().catch(() => {}));
+          element.addEventListener("change", () => previewTlr().catch(() => {}));
+        });
+        previewTlr().catch((error) => setStatus(error.message, true));
+      }
+
+      function readTlrArgs() {
+        return {
+          camera_namespace: tlrCameraSelectEl.value,
+          ...readArgs(tlrBasicArgsEl),
+          ...readArgs(tlrModeArgsEl),
+          ...readArgs(tlrModelArgsEl),
+        };
       }
 
       function readBagOptions() {
@@ -870,6 +999,39 @@
         await refreshLogs();
       }
 
+      async function previewTlr() {
+        const spec = state.tlrValidation;
+        if (!spec) {
+          return;
+        }
+        const result = await request("/api/preview", {
+          method: "POST",
+          body: JSON.stringify({
+            launcher_id: spec.launcher_id,
+            args: readTlrArgs(),
+          }),
+        });
+        tlrPreviewBoxEl.textContent = result.command.join(" ");
+      }
+
+      async function startTlr() {
+        const spec = state.tlrValidation;
+        if (!spec) {
+          throw new Error("TLR validation is not configured");
+        }
+        const result = await request("/api/start", {
+          method: "POST",
+          body: JSON.stringify({
+            launcher_id: spec.launcher_id,
+            args: readTlrArgs(),
+          }),
+        });
+        state.selectedProcessId = result.process.id;
+        setStatus(`Started ${result.process.label}; showing logs`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
       async function stopProcess(id) {
         await request("/api/stop", {
           method: "POST",
@@ -1049,10 +1211,13 @@
           const registry = await request("/api/launchers");
           state.launchers = registry.launchers;
           state.multiYolox = registry.multi_yolox;
+          state.tlrValidation = registry.tlr_validation;
           state.selectedLauncherId = state.launchers[0]?.id || null;
           renderLaunchers();
           renderLauncherForm();
           renderMultiYolox();
+          renderTlrValidation();
+          renderValidationTabs();
           renderBagPlayer();
           await refreshProcesses();
           await refreshBagStatus();
@@ -1071,6 +1236,18 @@
       });
       document.getElementById("startMultiBtn").addEventListener("click", () => {
         startMultiYolox().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("previewTlrBtn").addEventListener("click", () => {
+        previewTlr().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startTlrBtn").addEventListener("click", () => {
+        startTlr().catch((error) => setStatus(error.message, true));
+      });
+      yoloxTabBtn.addEventListener("click", () => {
+        switchValidationTab("yolox");
+      });
+      tlrTabBtn.addEventListener("click", () => {
+        switchValidationTab("tlr");
       });
       document.getElementById("stopAllBtn").addEventListener("click", () => {
         stopAll().catch((error) => setStatus(error.message, true));

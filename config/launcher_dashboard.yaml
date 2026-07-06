@@ -9,7 +9,7 @@ launchers:
         default: camera5
       use_decompress:
         type: bool
-        default: false
+        default: true
       use_sim_time:
         type: bool
         default: true
@@ -39,7 +39,7 @@ launchers:
         default: camera5
       use_decompress:
         type: bool
-        default: false
+        default: true
       use_sim_time:
         type: bool
         default: true
@@ -61,6 +61,30 @@ launchers:
       enable_tlr_classification:
         type: bool
         default: false
+      data_path:
+        type: string
+        default: /opt/autoware/mlmodels
+
+  tlr_detect_and_classifier:
+    label: TLR Detection/Classification
+    package: autoware_ml_model_launchers
+    file: tlr_detect_and_classifier.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: true
+      use_sim_time:
+        type: bool
+        default: true
+      build_only:
+        type: bool
+        default: false
+      enable_classification:
+        type: bool
+        default: true
       data_path:
         type: string
         default: /opt/autoware/mlmodels
@@ -130,7 +154,7 @@ multi_yolox:
   args:
     use_decompress:
       type: bool
-      default: false
+      default: true
       group: basic
     use_sim_time:
       type: bool
@@ -144,3 +168,39 @@ multi_yolox:
       type: bool
       default: false
       group: addon
+
+tlr_validation:
+  launcher_id: tlr_detect_and_classifier
+  cameras:
+    - camera0
+    - camera1
+    - camera2
+    - camera3
+    - camera4
+    - camera5
+    - camera6
+    - camera7
+    - camera8
+    - camera9
+    - camera10
+  args:
+    use_decompress:
+      type: bool
+      default: true
+      group: basic
+    use_sim_time:
+      type: bool
+      default: true
+      group: basic
+    build_only:
+      type: bool
+      default: false
+      group: basic
+    enable_classification:
+      type: bool
+      default: true
+      group: mode
+    data_path:
+      type: string
+      default: /opt/autoware/mlmodels
+      group: model
