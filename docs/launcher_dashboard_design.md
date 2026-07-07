@@ -30,6 +30,8 @@ http://127.0.0.1:8766/
   process per selected camera.
 - Provide a TLR validation form that starts only
   `tlr_detect_and_classifier.launch.xml` for a selected camera.
+- Provide a model comparison form that starts multiple launcher variants under a
+  shared run ID with isolated namespaces and output topics.
 - Provide a separate rosbag player panel for bag playback, stop, log visibility,
   and service-backed pause/resume/rate controls when available.
 
@@ -71,6 +73,8 @@ Each launcher declares:
 - `package`: ROS package passed to `ros2 launch`
 - `file`: launch file passed to `ros2 launch`
 - `args`: editable launch arguments and their type/default value
+- `isolation`: optional templates for rewriting namespace and output topic args
+  during comparison runs
 
 Argument metadata may include `group`. The first implementation uses it mainly
 for YOLOX multi-camera controls:
@@ -98,6 +102,17 @@ launchers:
 The backend rejects launcher IDs and argument names not present in this registry.
 It also builds subprocess commands as argument lists, never through a shell.
 
+Comparison presets are also declared in the registry. They contain common args
+and a list of variants. A variant names a launcher and supplies launcher-specific
+model args. At runtime the dashboard merges common args, variant args, and
+isolation args in that order.
+
+Registry args with `default: null` are treated as optional overrides and are not
+emitted in generated `ros2 launch` commands unless the UI or preset provides a
+value. This is useful for derived launch args such as `*_model_path`: comparison
+variants can override only `model_name` while the launch file still resolves the
+full path from the shared `data_path`, model folder, and ONNX file name.
+
 ## API
 
 - `GET /api/launchers`
@@ -112,16 +127,28 @@ It also builds subprocess commands as argument lists, never through a shell.
 - `POST /api/start_multi_yolox`
   - Body: `{"cameras": ["camera5"], "args": {...}}`
   - Starts `yolox_camera` once per camera.
+- `POST /api/preview_comparison`
+  - Body: `{"run_id": "...", "camera_namespace": "camera5", "auto_isolate": true,
+    "common_args": {...}, "variants": [...]}`
+  - Returns planned commands and isolated output topics without starting
+    processes.
+- `POST /api/start_comparison`
+  - Starts the planned comparison variants as one process group.
 - `POST /api/stop`
   - Body: `{"id": "..."}`
   - Stops one process.
 - `POST /api/stop_all`
   - Stops all managed processes.
+- `POST /api/stop_group`
+  - Body: `{"group_id": "..."}`
+  - Stops only processes in a comparison group.
 - `POST /api/close`
   - Body: `{"id": "..."}`
   - Removes one exited process from the dashboard process list.
 - `POST /api/close_all`
   - Removes all exited processes from the dashboard process list.
+- `POST /api/close_group`
+  - Removes exited processes in a comparison group.
 - `GET /api/bag/status`
   - Returns current bag player state and detected control capabilities.
 - `GET /api/bag/logs?lines=200`
@@ -176,9 +203,48 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
   data_path:=<value>
 ```
 
-The tab exposes only the common validation controls. More specialized model and
-topic arguments can still be edited through the generic launcher form after
-selecting `TLR Detection/Classification` in the launcher list.
+The tab exposes common validation controls plus the detector ML package name.
+It also renders the launch wiring derived from the selected camera:
+decompression path, detector package path, runtime param file, ML package param
+file, and the output topics. More specialized topic arguments can still be
+edited through the generic launcher form after selecting
+`TLR Detection/Classification` in the launcher list.
+
+## Model Comparison Behavior
+
+The comparison tab is a generic layer over registered launchers. It does not
+know YOLOX, TLR, or open detector semantics directly. Instead, each launcher
+declares an `isolation` contract:
+
+```yaml
+isolation:
+  arg_templates:
+    node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+  output_args:
+    output/objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/rois
+```
+
+The comparison tab sends a run ID, a shared camera, common args, and a JSON list
+of variants. Each variant includes `id`, `label`, `launcher_id`, and
+launcher-specific `args`. When `auto_isolate` is enabled, the backend rewrites
+only args declared by that launcher's isolation contract. The launch files
+therefore remain the source of truth for which namespaces and topics can be
+isolated.
+
+The process manager stores `group_id`, `run_id`, `variant_id`, and generated
+output topics on each managed process so the UI can stop or close a whole
+comparison group.
+
+The first comparison preset is intentionally editable JSON. This keeps the
+backend common across Autoware YOLOX, TLR YOLOX, and Python open detector
+launchers even though their model argument names and output message types differ.
+More specialized evaluator or metric panels can consume the same run metadata
+later.
+
+The default preset demonstrates the common case where models live under the same
+ML model root and folder, but different variants choose different ONNX file
+names. Full path args remain available as optional overrides for launchers that
+need them.
 
 ## Process Model
 
@@ -190,6 +256,7 @@ Each started launcher receives an in-memory process ID. The process manager keep
 - PID
 - return code
 - log file path
+- optional comparison group ID, run ID, variant ID, and isolated outputs
 
 Logs are written under:
 

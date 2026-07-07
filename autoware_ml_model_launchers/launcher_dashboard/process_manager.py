@@ -8,6 +8,7 @@ from pathlib import Path
 import signal
 import subprocess
 import threading
+import time
 import uuid
 from typing import Any
 
@@ -28,6 +29,10 @@ class ManagedProcess:
     started_at: str
     log_path: Path
     process: subprocess.Popen
+    group_id: str | None = None
+    run_id: str | None = None
+    variant_id: str | None = None
+    outputs: dict[str, str] | None = None
 
     def refresh(self) -> None:
         self.process.poll()
@@ -44,6 +49,10 @@ class ManagedProcess:
             "started_at": self.started_at,
             "command": self.command,
             "log_path": str(self.log_path),
+            "group_id": self.group_id,
+            "run_id": self.run_id,
+            "variant_id": self.variant_id,
+            "outputs": dict(self.outputs or {}),
         }
 
 
@@ -60,6 +69,7 @@ class ProcessManager:
         launcher_id: str,
         args: dict[str, Any] | None = None,
         label_suffix: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         spec = self.registry.get(launcher_id)
         command = build_launch_command(spec, args)
@@ -77,6 +87,7 @@ class ProcessManager:
             )
 
         label = spec.label if not label_suffix else f"{spec.label} {label_suffix}"
+        metadata = metadata or {}
         managed = ManagedProcess(
             process_id=process_id,
             launcher_id=launcher_id,
@@ -85,6 +96,10 @@ class ProcessManager:
             started_at=datetime.now(timezone.utc).isoformat(),
             log_path=log_path,
             process=process,
+            group_id=metadata.get("group_id"),
+            run_id=metadata.get("run_id"),
+            variant_id=metadata.get("variant_id"),
+            outputs=metadata.get("outputs"),
         )
         with self._lock:
             self._processes[process_id] = managed
@@ -107,6 +122,76 @@ class ProcessManager:
             launch_args["camera_namespace"] = camera
             starts.append(self.start(spec.launcher_id, launch_args, label_suffix=camera))
         return starts
+
+    def preview_comparison(self, payload: dict[str, Any]) -> dict[str, Any]:
+        plan = self._build_comparison_plan(payload)
+        planned_processes = []
+        for item in plan["items"]:
+            spec = self.registry.get(item["launcher_id"])
+            planned_processes.append(
+                {
+                    "label": item["label"],
+                    "launcher_id": item["launcher_id"],
+                    "variant_id": item["variant_id"],
+                    "run_id": plan["run_id"],
+                    "group_id": plan["group_id"],
+                    "args": item["args"],
+                    "outputs": item["outputs"],
+                    "command": build_launch_command(spec, item["args"]),
+                }
+            )
+        return {
+            "run_id": plan["run_id"],
+            "group_id": plan["group_id"],
+            "processes": planned_processes,
+        }
+
+    def start_comparison(self, payload: dict[str, Any]) -> dict[str, Any]:
+        plan = self._build_comparison_plan(payload)
+        processes = []
+        for item in plan["items"]:
+            processes.append(
+                self.start(
+                    item["launcher_id"],
+                    item["args"],
+                    label_suffix=f"{plan['run_id']} {item['label']}",
+                    metadata={
+                        "group_id": plan["group_id"],
+                        "run_id": plan["run_id"],
+                        "variant_id": item["variant_id"],
+                        "outputs": item["outputs"],
+                    },
+                )
+            )
+        return {
+            "run_id": plan["run_id"],
+            "group_id": plan["group_id"],
+            "processes": processes,
+        }
+
+    def stop_group(self, group_id: str) -> list[dict[str, Any]]:
+        with self._lock:
+            process_ids = [
+                process_id
+                for process_id, process in self._processes.items()
+                if process.group_id == group_id
+            ]
+        return [self.stop(process_id) for process_id in process_ids]
+
+    def close_group(self, group_id: str) -> list[dict[str, Any]]:
+        with self._lock:
+            process_ids = [
+                process_id
+                for process_id, process in self._processes.items()
+                if process.group_id == group_id
+            ]
+        closed = []
+        for process_id in process_ids:
+            try:
+                closed.append(self.close(process_id))
+            except ValueError:
+                continue
+        return closed
 
     def stop(self, process_id: str, timeout_sec: float = 5.0) -> dict[str, Any]:
         with self._lock:
@@ -164,6 +249,59 @@ class ProcessManager:
             return ""
         return _tail_file(managed.log_path, lines)
 
+    def _build_comparison_plan(self, payload: dict[str, Any]) -> dict[str, Any]:
+        run_id = _sanitize_token(str(payload.get("run_id") or _default_run_id()))
+        camera = str(payload.get("camera_namespace", "camera5"))
+        common_args = _dict_payload(payload.get("common_args", {}), "common_args")
+        variants = payload.get("variants", [])
+        if not isinstance(variants, list) or not variants:
+            raise ValueError("at least one comparison variant is required")
+
+        group_id = f"comparison:{run_id}"
+        items = []
+        for variant in variants:
+            if not isinstance(variant, dict):
+                raise ValueError("comparison variants must be objects")
+            if variant.get("enabled", True) is False:
+                continue
+
+            launcher_id = str(variant["launcher_id"])
+            spec = self.registry.get(launcher_id)
+            variant_id = _sanitize_token(str(variant["id"]))
+            label = str(variant.get("label") or variant_id)
+            args = dict(common_args)
+            args.update(_dict_payload(variant.get("args", {}), f"{variant_id} args"))
+            args["camera_namespace"] = camera
+
+            outputs: dict[str, str] = {}
+            if spec.isolation is not None and payload.get("auto_isolate", True):
+                context = {
+                    "run_id": run_id,
+                    "variant_id": variant_id,
+                    "camera_namespace": camera,
+                }
+                isolation_args = spec.isolation.build_args(context)
+                args.update(isolation_args)
+                outputs = {
+                    name: isolation_args[name]
+                    for name in spec.isolation.output_templates
+                    if name in isolation_args
+                }
+
+            items.append(
+                {
+                    "launcher_id": launcher_id,
+                    "variant_id": variant_id,
+                    "label": label,
+                    "args": args,
+                    "outputs": outputs,
+                }
+            )
+
+        if not items:
+            raise ValueError("at least one enabled comparison variant is required")
+        return {"run_id": run_id, "group_id": group_id, "items": items}
+
     @staticmethod
     def _signal_process_group(process: subprocess.Popen, sig: signal.Signals) -> None:
         try:
@@ -193,3 +331,18 @@ def _tail_file(path: Path, lines: int) -> str:
 
     log_lines = b"".join(chunks).splitlines(keepends=True)
     return b"".join(log_lines[-line_limit:]).decode("utf-8", errors="replace")
+
+
+def _default_run_id() -> str:
+    return time.strftime("%Y%m%d_%H%M%S", time.localtime())
+
+
+def _sanitize_token(value: str) -> str:
+    cleaned = "".join(character if character.isalnum() or character in "_-" else "_" for character in value)
+    return cleaned.strip("_") or "run"
+
+
+def _dict_payload(value: Any, name: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be an object")
+    return dict(value)

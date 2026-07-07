@@ -55,12 +55,16 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         handlers = {
             "/api/preview": self._handle_preview,
+            "/api/preview_comparison": self._handle_preview_comparison,
             "/api/start": self._handle_start,
             "/api/start_multi_yolox": self._handle_start_multi_yolox,
+            "/api/start_comparison": self._handle_start_comparison,
             "/api/stop": self._handle_stop,
             "/api/stop_all": self._handle_stop_all,
+            "/api/stop_group": self._handle_stop_group,
             "/api/close": self._handle_close,
             "/api/close_all": self._handle_close_all,
+            "/api/close_group": self._handle_close_group,
             "/api/bag/start": self._handle_bag_start,
             "/api/bag/stop": self._handle_bag_stop,
             "/api/bag/pause": self._handle_bag_pause,
@@ -84,6 +88,9 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
         command = build_launch_command(spec, payload.get("args", {}))
         self._send_json({"command": command})
 
+    def _handle_preview_comparison(self, payload: dict[str, Any]) -> None:
+        self._send_json(self.manager.preview_comparison(payload))
+
     def _handle_start(self, payload: dict[str, Any]) -> None:
         process = self.manager.start(str(payload["launcher_id"]), payload.get("args", {}))
         self._send_json({"process": process})
@@ -93,6 +100,9 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
         processes = self.manager.start_multi_yolox(cameras, payload.get("args", {}))
         self._send_json({"processes": processes})
 
+    def _handle_start_comparison(self, payload: dict[str, Any]) -> None:
+        self._send_json(self.manager.start_comparison(payload))
+
     def _handle_stop(self, payload: dict[str, Any]) -> None:
         process = self.manager.stop(str(payload["id"]))
         self._send_json({"process": process})
@@ -100,12 +110,18 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
     def _handle_stop_all(self, _payload: dict[str, Any]) -> None:
         self._send_json({"processes": self.manager.stop_all()})
 
+    def _handle_stop_group(self, payload: dict[str, Any]) -> None:
+        self._send_json({"processes": self.manager.stop_group(str(payload["group_id"]))})
+
     def _handle_close(self, payload: dict[str, Any]) -> None:
         process = self.manager.close(str(payload["id"]))
         self._send_json({"process": process})
 
     def _handle_close_all(self, _payload: dict[str, Any]) -> None:
         self._send_json({"processes": self.manager.close_all()})
+
+    def _handle_close_group(self, payload: dict[str, Any]) -> None:
+        self._send_json({"processes": self.manager.close_group(str(payload["group_id"]))})
 
     def _handle_bag_start(self, payload: dict[str, Any]) -> None:
         player = self.bag_manager.start(

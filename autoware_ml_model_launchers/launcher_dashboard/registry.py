@@ -21,6 +21,7 @@ class ArgSpec:
     value_type: str
     default: Any = None
     choices: tuple[str, ...] = ()
+    suggestions: tuple[str, ...] = ()
     group: str = "basic"
 
     @classmethod
@@ -29,11 +30,13 @@ class ArgSpec:
         if value_type not in {"string", "bool", "int", "float"}:
             raise RegistryError(f"unsupported type for {name}: {value_type}")
         choices = tuple(str(item) for item in data.get("choices", ()))
+        suggestions = tuple(str(item) for item in data.get("suggestions", ()))
         return cls(
             name=name,
             value_type=value_type,
             default=data.get("default"),
             choices=choices,
+            suggestions=suggestions,
             group=str(data.get("group", "basic")),
         )
 
@@ -55,6 +58,7 @@ class ArgSpec:
             "type": self.value_type,
             "default": self.default,
             "choices": list(self.choices),
+            "suggestions": list(self.suggestions),
             "group": self.group,
         }
 
@@ -66,6 +70,7 @@ class LauncherSpec:
     package: str
     file: str
     args: dict[str, ArgSpec]
+    isolation: "IsolationSpec | None" = None
 
     @classmethod
     def from_mapping(cls, launcher_id: str, data: dict[str, Any]) -> "LauncherSpec":
@@ -82,6 +87,7 @@ class LauncherSpec:
             package=str(data["package"]),
             file=str(data["file"]),
             args=args,
+            isolation=IsolationSpec.from_mapping(data.get("isolation", {})),
         )
 
     def defaults(self) -> dict[str, Any]:
@@ -94,6 +100,42 @@ class LauncherSpec:
             "package": self.package,
             "file": self.file,
             "args": {name: spec.to_json() for name, spec in self.args.items()},
+            "isolation": self.isolation.to_json() if self.isolation else None,
+        }
+
+
+@dataclass(frozen=True)
+class IsolationSpec:
+    arg_templates: dict[str, str]
+    output_templates: dict[str, str]
+
+    @classmethod
+    def from_mapping(cls, data: Any) -> "IsolationSpec | None":
+        if not isinstance(data, dict):
+            return None
+        arg_templates = _string_mapping(data.get("arg_templates", {}), "isolation arg_templates")
+        output_templates = _string_mapping(data.get("output_args", {}), "isolation output_args")
+        if not arg_templates and not output_templates:
+            return None
+        return cls(arg_templates=arg_templates, output_templates=output_templates)
+
+    def build_args(self, context: dict[str, str]) -> dict[str, str]:
+        args = {
+            name: _format_template(template, context)
+            for name, template in self.arg_templates.items()
+        }
+        args.update(
+            {
+                name: _format_template(template, context)
+                for name, template in self.output_templates.items()
+            }
+        )
+        return args
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "arg_templates": dict(self.arg_templates),
+            "output_args": dict(self.output_templates),
         }
 
 
@@ -134,10 +176,78 @@ class CameraLauncherPresetSpec:
 
 
 @dataclass(frozen=True)
+class ComparisonVariantSpec:
+    variant_id: str
+    label: str
+    launcher_id: str
+    args: dict[str, Any]
+
+    @classmethod
+    def from_mapping(cls, data: dict[str, Any]) -> "ComparisonVariantSpec":
+        args = data.get("args", {})
+        if not isinstance(args, dict):
+            raise RegistryError("model_comparison variant args must be a mapping")
+        variant_id = str(data["id"])
+        return cls(
+            variant_id=variant_id,
+            label=str(data.get("label", variant_id)),
+            launcher_id=str(data["launcher_id"]),
+            args=dict(args),
+        )
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "id": self.variant_id,
+            "label": self.label,
+            "launcher_id": self.launcher_id,
+            "args": dict(self.args),
+        }
+
+
+@dataclass(frozen=True)
+class ModelComparisonSpec:
+    cameras: tuple[str, ...]
+    args: dict[str, ArgSpec]
+    variants: tuple[ComparisonVariantSpec, ...]
+
+    @classmethod
+    def from_mapping(cls, data: dict[str, Any]) -> "ModelComparisonSpec":
+        args_data = data.get("args", {})
+        variants_data = data.get("variants", ())
+        if not isinstance(args_data, dict):
+            raise RegistryError("model_comparison args must be a mapping")
+        if not isinstance(variants_data, list):
+            raise RegistryError("model_comparison variants must be a list")
+        return cls(
+            cameras=tuple(str(camera) for camera in data.get("cameras", ())),
+            args={
+                name: ArgSpec.from_mapping(name, spec if isinstance(spec, dict) else {})
+                for name, spec in args_data.items()
+            },
+            variants=tuple(
+                ComparisonVariantSpec.from_mapping(item)
+                for item in variants_data
+                if isinstance(item, dict)
+            ),
+        )
+
+    def defaults(self) -> dict[str, Any]:
+        return {name: spec.default for name, spec in self.args.items()}
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "cameras": list(self.cameras),
+            "args": {name: spec.to_json() for name, spec in self.args.items()},
+            "variants": [variant.to_json() for variant in self.variants],
+        }
+
+
+@dataclass(frozen=True)
 class LauncherRegistry:
     launchers: dict[str, LauncherSpec]
     multi_yolox: CameraLauncherPresetSpec | None = None
     tlr_validation: CameraLauncherPresetSpec | None = None
+    model_comparison: ModelComparisonSpec | None = None
 
     def get(self, launcher_id: str) -> LauncherSpec:
         try:
@@ -150,6 +260,9 @@ class LauncherRegistry:
             "launchers": [spec.to_json() for spec in self.launchers.values()],
             "multi_yolox": self.multi_yolox.to_json() if self.multi_yolox else None,
             "tlr_validation": self.tlr_validation.to_json() if self.tlr_validation else None,
+            "model_comparison": (
+                self.model_comparison.to_json() if self.model_comparison else None
+            ),
         }
 
 
@@ -162,6 +275,8 @@ def build_launch_command(spec: LauncherSpec, args: dict[str, Any] | None = None)
     merged = spec.defaults()
     merged.update(provided)
     for name, value in merged.items():
+        if value is None:
+            continue
         command.append(f"{name}:={spec.args[name].coerce(value)}")
     return command
 
@@ -192,10 +307,17 @@ def load_registry(path: Path) -> LauncherRegistry:
         if isinstance(tlr_data, dict)
         else None
     )
+    comparison_data = data.get("model_comparison")
+    model_comparison = (
+        ModelComparisonSpec.from_mapping(comparison_data)
+        if isinstance(comparison_data, dict)
+        else None
+    )
     return LauncherRegistry(
         launchers=launchers,
         multi_yolox=multi_yolox,
         tlr_validation=tlr_validation,
+        model_comparison=model_comparison,
     )
 
 
@@ -221,3 +343,16 @@ def _coerce_bool(value: Any) -> bool:
     if text in {"0", "false", "no", "off"}:
         return False
     raise RegistryError(f"invalid bool value: {value}")
+
+
+def _string_mapping(data: Any, name: str) -> dict[str, str]:
+    if not isinstance(data, dict):
+        raise RegistryError(f"{name} must be a mapping")
+    return {str(key): str(value) for key, value in data.items()}
+
+
+def _format_template(template: str, context: dict[str, str]) -> str:
+    try:
+        return template.format(**context)
+    except KeyError as exc:
+        raise RegistryError(f"unknown isolation template key: {exc.args[0]}") from exc

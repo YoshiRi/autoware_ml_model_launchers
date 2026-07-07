@@ -40,6 +40,9 @@ def test_default_registry_builds_yolox_command():
     assert "use_decompress:=false" in command
     assert "use_decompress:=true" in default_command
     assert "use_sim_time:=true" in default_command
+    assert not any(item.startswith("node_namespace:=") for item in default_command)
+    assert not any(item.startswith("input/image:=") for item in default_command)
+    assert not any(item.startswith("output/objects:=") for item in default_command)
 
 
 def test_multi_yolox_registry_exposes_cameras_and_groups():
@@ -63,11 +66,13 @@ def test_tlr_validation_registry_builds_command():
             "use_decompress": True,
             "use_sim_time": True,
             "enable_classification": True,
+            "detector_ml_package_name": "traffic_light_detector",
         },
     )
 
     assert payload["cameras"][:5] == ["camera0", "camera1", "camera2", "camera3", "camera4"]
     assert payload["args"]["enable_classification"]["group"] == "mode"
+    assert payload["args"]["detector_ml_package_name"]["group"] == "model"
     assert command[:4] == [
         "ros2",
         "launch",
@@ -78,6 +83,49 @@ def test_tlr_validation_registry_builds_command():
     assert "use_decompress:=true" in command
     assert "use_sim_time:=true" in command
     assert "enable_classification:=true" in command
+    assert "detector_ml_package_name:=traffic_light_detector" in command
+    assert not any(item.startswith("yolox_model_path:=") for item in command)
+    assert not any(item.startswith("yolox_label_path:=") for item in command)
+
+
+def test_model_comparison_registry_exposes_variants_and_isolation():
+    registry = load_registry(default_registry_path())
+    payload = registry.to_json()["model_comparison"]
+    yolox = registry.get("yolox_camera")
+    tlr = registry.get("tlr_detect_and_classifier")
+
+    assert payload["cameras"][:5] == ["camera0", "camera1", "camera2", "camera3", "camera4"]
+    assert payload["variants"][0]["id"] == "yolox_960"
+    assert payload["variants"][1]["args"]["model_name"] == "yolox-sPlus-T4-640x640-debris.onnx"
+    assert payload["variants"][2]["args"]["detector_ml_package_name"] == "traffic_light_detector"
+    assert payload["args"]["use_sim_time"]["default"] is True
+    assert yolox.isolation is not None
+    assert tlr.isolation is not None
+
+    yolox_args = yolox.isolation.build_args(
+        {
+            "run_id": "run_a",
+            "variant_id": "yolox_base",
+            "camera_namespace": "camera5",
+        }
+    )
+    tlr_args = tlr.isolation.build_args(
+        {
+            "run_id": "run_a",
+            "variant_id": "tlr_detector",
+            "camera_namespace": "camera5",
+        }
+    )
+
+    assert yolox_args["node_namespace"] == "evaluation/run_a/yolox_base/camera5"
+    assert (
+        yolox_args["output/objects"]
+        == "/evaluation/run_a/yolox_base/camera5/object_recognition/rois"
+    )
+    assert (
+        tlr_args["output/rois"]
+        == "/evaluation/run_a/tlr_detector/camera5/tlr/rois"
+    )
 
 
 def test_registry_rejects_unknown_launcher_arg():
@@ -85,6 +133,20 @@ def test_registry_rejects_unknown_launcher_arg():
 
     with pytest.raises(RegistryError, match="unknown args"):
         build_launch_command(registry.get("yolox_camera"), {"not_an_arg": "value"})
+
+
+def test_open_yolo_registry_uses_launch_defaults_for_wiring():
+    registry = load_registry(default_registry_path())
+    command = build_launch_command(
+        registry.get("open_yolo"),
+        {"camera_namespace": "camera6", "model": "yolo11n.pt"},
+    )
+
+    assert "camera_namespace:=camera6" in command
+    assert "model:=yolo11n.pt" in command
+    assert not any(item.startswith("detector_name:=") for item in command)
+    assert not any(item.startswith("input/image:=") for item in command)
+    assert not any(item.startswith("output/detections:=") for item in command)
 
 
 def test_process_manager_start_uses_command_list(monkeypatch, tmp_path):
@@ -179,6 +241,99 @@ def test_process_manager_tail_log_caps_requested_lines(monkeypatch, tmp_path):
     assert len(tail) == 500
     assert tail[0] == "line-100"
     assert tail[-1] == "line-599"
+
+
+def test_process_manager_previews_isolated_comparison():
+    registry = load_registry(default_registry_path())
+    manager = ProcessManager(registry)
+
+    preview = manager.preview_comparison(
+        {
+            "run_id": "eval run",
+            "camera_namespace": "camera4",
+            "common_args": {"use_sim_time": True, "use_decompress": True},
+            "variants": [
+                {
+                    "id": "yolox/base",
+                    "label": "YOLOX Base",
+                    "launcher_id": "yolox_camera",
+                    "args": {"model_name": "model_a.onnx", "enable_bytetrack": False},
+                }
+            ],
+        }
+    )
+
+    process = preview["processes"][0]
+
+    assert preview["run_id"] == "eval_run"
+    assert preview["group_id"] == "comparison:eval_run"
+    assert process["variant_id"] == "yolox_base"
+    assert "model_name:=model_a.onnx" in process["command"]
+    assert "camera_namespace:=camera4" in process["command"]
+    assert "node_namespace:=evaluation/eval_run/yolox_base/camera4" in process["command"]
+    assert (
+        "output/objects:=/evaluation/eval_run/yolox_base/camera4/object_recognition/rois"
+        in process["command"]
+    )
+
+
+def test_process_manager_starts_comparison_with_group_metadata(monkeypatch, tmp_path):
+    registry = load_registry(default_registry_path())
+    captured = []
+
+    class FakeProcess:
+        pid = 12345
+        returncode = None
+
+        def __init__(self, command, **kwargs):
+            captured.append(command)
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):
+            self.returncode = 0
+            return self.returncode
+
+    monkeypatch.setattr(process_manager.subprocess, "Popen", FakeProcess)
+
+    manager = ProcessManager(registry, log_dir=tmp_path)
+    result = manager.start_comparison(
+        {
+            "run_id": "run_a",
+            "camera_namespace": "camera5",
+            "common_args": {"use_sim_time": True},
+            "variants": [
+                {
+                    "id": "yolox_base",
+                    "label": "YOLOX Base",
+                    "launcher_id": "yolox_camera",
+                    "args": {"enable_bytetrack": False},
+                },
+                {
+                    "id": "tlr_detector",
+                    "label": "TLR Detector",
+                    "launcher_id": "tlr_detect_and_classifier",
+                    "args": {"enable_classification": False},
+                },
+            ],
+        }
+    )
+
+    assert len(result["processes"]) == 2
+    assert len(captured) == 2
+    assert {process["variant_id"] for process in result["processes"]} == {
+        "yolox_base",
+        "tlr_detector",
+    }
+    assert all(process["group_id"] == "comparison:run_a" for process in result["processes"])
+    assert "output/rois:=/evaluation/run_a/tlr_detector/camera5/tlr/rois" in captured[1]
+    assert "detector_ml_package_name:=traffic_light_detector" in captured[1]
+    assert not any(item.startswith("yolox_model_path:=") for item in captured[1])
+
+    stopped = manager.stop_group("comparison:run_a")
+
+    assert len(stopped) == 2
 
 
 def test_bag_play_command_keeps_args_as_list(tmp_path):

@@ -28,6 +28,33 @@ launchers:
       data_path:
         type: string
         default: /opt/autoware/mlmodels
+      node_namespace:
+        type: string
+        default:
+        group: advanced
+      input/image:
+        type: string
+        default:
+        group: advanced
+      output/objects:
+        type: string
+        default:
+        group: advanced
+      output/mask:
+        type: string
+        default:
+        group: advanced
+      output/tracked_objects:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      arg_templates:
+        node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+      output_args:
+        output/objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/rois
+        output/mask: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/mask
+        output/tracked_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/tracked_rois
 
   all_single_camera_detection:
     label: Single Camera Detection
@@ -64,6 +91,48 @@ launchers:
       data_path:
         type: string
         default: /opt/autoware/mlmodels
+      node_namespace:
+        type: string
+        default:
+        group: advanced
+      input/image:
+        type: string
+        default:
+        group: advanced
+      object_yolox_output_objects:
+        type: string
+        default:
+        group: advanced
+      object_yolox_output_mask:
+        type: string
+        default:
+        group: advanced
+      object_yolox_output_tracked_objects:
+        type: string
+        default:
+        group: advanced
+      tlr_output_detected_objects:
+        type: string
+        default:
+        group: advanced
+      tlr_output_rois:
+        type: string
+        default:
+        group: advanced
+      tlr_output_traffic_signals:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      arg_templates:
+        node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+      output_args:
+        object_yolox_output_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/rois
+        object_yolox_output_mask: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/mask
+        object_yolox_output_tracked_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/tracked_rois
+        tlr_output_detected_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/yolox/objects
+        tlr_output_rois: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/rois
+        tlr_output_traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/traffic_signals
 
   tlr_detect_and_classifier:
     label: TLR Detection/Classification
@@ -88,6 +157,77 @@ launchers:
       data_path:
         type: string
         default: /opt/autoware/mlmodels
+        suggestions:
+          - /opt/autoware/mlmodels
+          - /home/yoshiri/autoware_data/TLRtest
+      node_namespace:
+        type: string
+        default:
+        group: advanced
+      input/image:
+        type: string
+        default:
+        group: advanced
+      detector_ml_package_name:
+        type: string
+        default: traffic_light_detector
+        suggestions:
+          - traffic_light_detector
+        group: model
+      detector_ml_package_path:
+        type: string
+        default:
+        group: model
+      detector_runtime_param_path:
+        type: string
+        default:
+        group: advanced
+      detector_param_suffix:
+        type: string
+        default: ""
+        suggestions:
+          - ""
+          - .1280x1280_20260703_best
+          - .1920x1280_20260706_best
+        group: model
+      detector_param_path:
+        type: string
+        default:
+        group: advanced
+      output/detected_objects:
+        type: string
+        default:
+        group: advanced
+      output/rois:
+        type: string
+        default:
+        group: advanced
+      output/car/traffic_signals:
+        type: string
+        default:
+        group: advanced
+      output/pedestrian/traffic_signals:
+        type: string
+        default:
+        group: advanced
+      output/traffic_signals:
+        type: string
+        default:
+        group: advanced
+      output/debug/image:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      arg_templates:
+        node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+      output_args:
+        output/detected_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/yolox/objects
+        output/rois: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/rois
+        output/car/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/car_traffic_signals
+        output/pedestrian/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/pedestrian_traffic_signals
+        output/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/traffic_signals
+        output/debug/image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/debug/image
 
   open_yolo:
     label: Open YOLO
@@ -99,10 +239,8 @@ launchers:
         default: camera5
       input/image:
         type: string
-        default: /sensing/camera/camera5/image_raw/compressed
-      detector_name:
-        type: string
-        default: open_yolo
+        default:
+        group: advanced
       model:
         type: string
         default: yolo11x.pt
@@ -115,6 +253,28 @@ launchers:
       publish_debug_compressed:
         type: bool
         default: false
+      output/detections:
+        type: string
+        default:
+        group: advanced
+      output/debug_image:
+        type: string
+        default:
+        group: advanced
+      output/debug_compressed:
+        type: string
+        default:
+        group: advanced
+      output/predict_ms:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      output_args:
+        output/detections: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/detections
+        output/debug_image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/debug/image
+        output/debug_compressed: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/debug/image/compressed
+        output/predict_ms: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/latency/infer_ms
 
   streampetr_x2:
     label: StreamPETR X2
@@ -203,4 +363,96 @@ tlr_validation:
     data_path:
       type: string
       default: /opt/autoware/mlmodels
+      suggestions:
+        - /opt/autoware/mlmodels
+        - /home/yoshiri/autoware_data/TLRtest
       group: model
+    detector_ml_package_name:
+      type: string
+      default: traffic_light_detector
+      suggestions:
+        - traffic_light_detector
+      group: model
+    detector_param_suffix:
+      type: string
+      default: ""
+      suggestions:
+        - ""
+        - .1280x1280_20260703_best
+        - .1920x1280_20260706_best
+      group: model
+
+model_comparison:
+  cameras:
+    - camera0
+    - camera1
+    - camera2
+    - camera3
+    - camera4
+    - camera5
+    - camera6
+    - camera7
+    - camera8
+    - camera9
+    - camera10
+  args:
+    use_decompress:
+      type: bool
+      default: true
+      group: basic
+    use_sim_time:
+      type: bool
+      default: true
+      group: basic
+    build_only:
+      type: bool
+      default: false
+      group: basic
+    data_path:
+      type: string
+      default: /opt/autoware/mlmodels
+      group: model
+  variants:
+    - id: yolox_960
+      label: YOLOX 960
+      launcher_id: yolox_camera
+      args:
+        enable_bytetrack: false
+        enable_bytetrack_visualizer: false
+        model_name: yolox-sPlus-T4-960x960-debris.onnx
+    - id: yolox_640
+      label: YOLOX 640
+      launcher_id: yolox_camera
+      args:
+        enable_bytetrack: false
+        enable_bytetrack_visualizer: false
+        model_name: yolox-sPlus-T4-640x640-debris.onnx
+    - id: tlr_detector
+      label: TLR Detector
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        detector_ml_package_name: traffic_light_detector
+    - id: tlr_960_20260629
+      label: TLR 960 20260629
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        data_path: /home/yoshiri/autoware_data/TLRtest
+        detector_ml_package_name: traffic_light_detector
+    - id: tlr_1280_20260703
+      label: TLR 1280 20260703
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        data_path: /home/yoshiri/autoware_data/TLRtest
+        detector_ml_package_name: traffic_light_detector
+        detector_param_suffix: .1280x1280_20260703_best
+    - id: tlr_1920x1280_20260706
+      label: TLR 1920x1280 20260706
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        data_path: /home/yoshiri/autoware_data/TLRtest
+        detector_ml_package_name: traffic_light_detector
+        detector_param_suffix: .1920x1280_20260706_best

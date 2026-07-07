@@ -209,6 +209,7 @@
 
       input[type="text"],
       input[type="number"],
+      textarea,
       select {
         width: 100%;
         min-height: 36px;
@@ -218,6 +219,15 @@
         color: var(--ink);
         padding: 0 9px;
         font: inherit;
+      }
+
+      textarea {
+        min-height: 160px;
+        padding: 9px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        resize: vertical;
       }
 
       input[type="checkbox"] {
@@ -248,6 +258,26 @@
       .field-block {
         display: grid;
         gap: 5px;
+      }
+
+      .advanced-block {
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+
+      .advanced-block summary {
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .advanced-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding-top: 10px;
       }
 
       .path-picker {
@@ -337,6 +367,36 @@
         font-weight: 700;
       }
 
+      .wiring {
+        display: grid;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+
+      .wiring-row {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+      }
+
+      .wiring-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .wiring-value {
+        min-width: 0;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
       .browser {
         display: grid;
         gap: 8px;
@@ -405,7 +465,8 @@
           grid-template-columns: 1fr;
         }
 
-        .grid-two {
+        .grid-two,
+        .advanced-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -449,6 +510,7 @@
               <div class="tabbar">
                 <button id="yoloxTabBtn" class="tab-button active">YOLOX Multi-Camera</button>
                 <button id="tlrTabBtn" class="tab-button">TLR Validation</button>
+                <button id="comparisonTabBtn" class="tab-button">Comparison</button>
               </div>
 
               <div id="yoloxTabPanel" class="tab-panel">
@@ -487,12 +549,47 @@
                   <h3>Model Settings</h3>
                   <div id="tlrModelArgs" class="grid-two"></div>
                 </div>
+                <div class="settings-group">
+                  <h3>Launch Wiring</h3>
+                  <div id="tlrWiring" class="wiring"></div>
+                </div>
                 <div class="actions">
                   <button id="previewTlrBtn">Preview TLR</button>
                   <button id="startTlrBtn" class="primary">Start TLR</button>
                 </div>
                 <pre id="tlrPreviewBox">TLR validation is not configured.</pre>
                 <div class="status-line warning" id="tlrNote"></div>
+              </div>
+
+              <div id="comparisonTabPanel" class="tab-panel" hidden>
+                <div class="grid-two">
+                  <label>
+                    Run ID
+                    <input id="comparisonRunId" type="text" />
+                  </label>
+                  <label>
+                    Camera
+                    <select id="comparisonCameraSelect"></select>
+                  </label>
+                  <label class="check-row">
+                    <input id="comparisonAutoIsolate" type="checkbox" checked />
+                    auto isolate outputs
+                  </label>
+                </div>
+                <div class="settings-group">
+                  <h3>Common Settings</h3>
+                  <div id="comparisonCommonArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Variants JSON</h3>
+                  <textarea id="comparisonVariantsJson" spellcheck="false"></textarea>
+                </div>
+                <div class="actions">
+                  <button id="previewComparisonBtn">Preview Comparison</button>
+                  <button id="startComparisonBtn" class="primary">Start Comparison</button>
+                </div>
+                <pre id="comparisonPreviewBox">Comparison preset is not configured.</pre>
+                <div class="status-line warning" id="comparisonNote"></div>
               </div>
             </div>
           </div>
@@ -575,6 +672,7 @@
         launchers: [],
         multiYolox: null,
         tlrValidation: null,
+        modelComparison: null,
         activeValidationTab: "yolox",
         selectedLauncherId: null,
         selectedProcessId: null,
@@ -598,14 +696,24 @@
       const multiNoteEl = document.getElementById("multiNote");
       const yoloxTabBtn = document.getElementById("yoloxTabBtn");
       const tlrTabBtn = document.getElementById("tlrTabBtn");
+      const comparisonTabBtn = document.getElementById("comparisonTabBtn");
       const yoloxTabPanel = document.getElementById("yoloxTabPanel");
       const tlrTabPanel = document.getElementById("tlrTabPanel");
+      const comparisonTabPanel = document.getElementById("comparisonTabPanel");
       const tlrCameraSelectEl = document.getElementById("tlrCameraSelect");
       const tlrBasicArgsEl = document.getElementById("tlrBasicArgs");
       const tlrModeArgsEl = document.getElementById("tlrModeArgs");
       const tlrModelArgsEl = document.getElementById("tlrModelArgs");
+      const tlrWiringEl = document.getElementById("tlrWiring");
       const tlrPreviewBoxEl = document.getElementById("tlrPreviewBox");
       const tlrNoteEl = document.getElementById("tlrNote");
+      const comparisonRunIdEl = document.getElementById("comparisonRunId");
+      const comparisonCameraSelectEl = document.getElementById("comparisonCameraSelect");
+      const comparisonAutoIsolateEl = document.getElementById("comparisonAutoIsolate");
+      const comparisonCommonArgsEl = document.getElementById("comparisonCommonArgs");
+      const comparisonVariantsJsonEl = document.getElementById("comparisonVariantsJson");
+      const comparisonPreviewBoxEl = document.getElementById("comparisonPreviewBox");
+      const comparisonNoteEl = document.getElementById("comparisonNote");
       const bagStateEl = document.getElementById("bagState");
       const bagPathEl = document.getElementById("bagPath");
       const bagRateEl = document.getElementById("bagRate");
@@ -675,9 +783,25 @@
           } />${name}</label>`;
         }
         const inputType = spec.type === "int" || spec.type === "float" ? "number" : "text";
-        return `<label>${name}<input id="${id}" data-name="${name}" data-type="${spec.type}" type="${inputType}" value="${
+        const omitEmpty = spec.default == null ? "true" : "false";
+        const listId =
+          spec.suggestions && spec.suggestions.length > 0 ? `${id}_suggestions` : "";
+        const dataList = listId
+          ? `<datalist id="${listId}">${spec.suggestions
+              .map((item) => `<option value="${escapeHtml(item)}"></option>`)
+              .join("")}</datalist>`
+          : "";
+        return `<label>${name}<input id="${id}" data-name="${name}" data-type="${spec.type}" data-omit-empty="${omitEmpty}" type="${inputType}" value="${
           spec.default ?? ""
-        }" /></label>`;
+        }" ${listId ? `list="${listId}"` : ""} />${dataList}</label>`;
+      }
+
+      function defaultRunId() {
+        const now = new Date();
+        const pad = (value) => String(value).padStart(2, "0");
+        return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(
+          now.getHours()
+        )}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
       }
 
       function readArgs(container) {
@@ -687,10 +811,28 @@
           if (element.dataset.type === "bool") {
             args[name] = element.checked;
           } else {
-            args[name] = element.value;
+            const value = element.value;
+            if (element.dataset.omitEmpty === "true" && value === "") {
+              return;
+            }
+            args[name] = value;
           }
         });
         return args;
+      }
+
+      function pathJoin(root, leaf) {
+        return `${String(root || "").replace(/\/+$/, "")}/${String(leaf || "").replace(/^\/+/, "")}`;
+      }
+
+      function tlrTopic(camera, suffix) {
+        return `/perception/traffic_light_recognition/${camera}/${suffix}`;
+      }
+
+      function wiringRow(label, value) {
+        return `<div class="wiring-row"><div class="wiring-label">${escapeHtml(
+          label
+        )}</div><div class="wiring-value">${escapeHtml(value)}</div></div>`;
       }
 
       function renderLaunchers() {
@@ -721,9 +863,21 @@
         }
         launcherTitleEl.textContent = launcher.label;
         launcherFileEl.textContent = launcher.file;
-        launcherFormEl.innerHTML = Object.entries(launcher.args)
-          .map(([name, spec]) => renderInput("arg", name, spec))
-          .join("");
+        const entries = Object.entries(launcher.args);
+        const primaryArgs = entries.filter(([, spec]) => (spec.group || "basic") !== "advanced");
+        const advancedArgs = entries.filter(([, spec]) => (spec.group || "basic") === "advanced");
+        const advancedHtml = advancedArgs.length
+          ? `<details class="advanced-block">
+              <summary>Advanced wiring overrides</summary>
+              <div class="advanced-grid">
+                ${advancedArgs.map(([name, spec]) => renderInput("arg", name, spec)).join("")}
+              </div>
+            </details>`
+          : "";
+        launcherFormEl.innerHTML = [
+          ...primaryArgs.map(([name, spec]) => renderInput("arg", name, spec)),
+          advancedHtml,
+        ].join("");
         previewLauncher().catch((error) => setStatus(error.message, true));
       }
 
@@ -763,10 +917,14 @@
 
       function renderValidationTabs() {
         const isYolox = state.activeValidationTab === "yolox";
+        const isTlr = state.activeValidationTab === "tlr";
+        const isComparison = state.activeValidationTab === "comparison";
         yoloxTabBtn.classList.toggle("active", isYolox);
-        tlrTabBtn.classList.toggle("active", !isYolox);
+        tlrTabBtn.classList.toggle("active", isTlr);
+        comparisonTabBtn.classList.toggle("active", isComparison);
         yoloxTabPanel.hidden = !isYolox;
-        tlrTabPanel.hidden = isYolox;
+        tlrTabPanel.hidden = !isTlr;
+        comparisonTabPanel.hidden = !isComparison;
       }
 
       function renderTlrValidation() {
@@ -801,11 +959,17 @@
         tlrModelArgsEl.innerHTML = modelArgs
           .map(([name, argSpec]) => renderInput("tlr_model", name, argSpec))
           .join("");
-        tlrNoteEl.textContent = "TLR only launches detector and optional classifiers.";
+        tlrNoteEl.textContent =
+          "Detector artifacts are loaded from the ML package param; classifiers remain optional.";
         [tlrCameraSelectEl, tlrBasicArgsEl, tlrModeArgsEl, tlrModelArgsEl].forEach((element) => {
-          element.addEventListener("input", () => previewTlr().catch(() => {}));
-          element.addEventListener("change", () => previewTlr().catch(() => {}));
+          const update = () => {
+            renderTlrWiring();
+            previewTlr().catch(() => {});
+          };
+          element.addEventListener("input", update);
+          element.addEventListener("change", update);
         });
+        renderTlrWiring();
         previewTlr().catch((error) => setStatus(error.message, true));
       }
 
@@ -815,6 +979,93 @@
           ...readArgs(tlrBasicArgsEl),
           ...readArgs(tlrModeArgsEl),
           ...readArgs(tlrModelArgsEl),
+        };
+      }
+
+      function renderTlrWiring() {
+        if (!state.tlrValidation) {
+          tlrWiringEl.innerHTML = "";
+          return;
+        }
+        const args = readTlrArgs();
+        const camera = args.camera_namespace || "camera5";
+        const dataPath = args.data_path || "/opt/autoware/mlmodels";
+        const packageName = args.detector_ml_package_name || "traffic_light_detector";
+        const packagePath = pathJoin(dataPath, packageName);
+        const inputImage = `/sensing/camera/${camera}/image_raw`;
+        const detectorParam = pathJoin(packagePath, "ml_package_yolox.param.yaml");
+        const runtimeParam =
+          "$(find-pkg-share autoware_ml_model_launchers)/config/tlr_tensorrt_yolox.param.yaml";
+        const classifierState = args.enable_classification ? "enabled" : "disabled";
+        const decompressorState = args.use_decompress
+          ? `${inputImage}/compressed -> ${inputImage}`
+          : "disabled";
+        const outputLines = [
+          `objects: ${tlrTopic(camera, "detection/yolox/objects")}`,
+          `debug image: ${tlrTopic(camera, "detection/yolox/debug/image")}`,
+        ];
+        if (args.enable_classification) {
+          outputLines.push(`rois: ${tlrTopic(camera, "detection/rois")}`);
+          outputLines.push(`signals: ${tlrTopic(camera, "classification/traffic_signals")}`);
+        }
+
+        tlrWiringEl.innerHTML = [
+          wiringRow("input", inputImage),
+          wiringRow("decompress", decompressorState),
+          wiringRow("detector", packagePath),
+          wiringRow("runtime", runtimeParam),
+          wiringRow("ml param", detectorParam),
+          wiringRow("classify", classifierState),
+          wiringRow("outputs", outputLines.join("\n")),
+        ].join("");
+      }
+
+      function renderModelComparison() {
+        const spec = state.modelComparison;
+        if (!spec) {
+          comparisonNoteEl.textContent = "No model comparison preset is configured.";
+          comparisonPreviewBoxEl.textContent = "Comparison preset is not configured.";
+          return;
+        }
+        comparisonRunIdEl.value = comparisonRunIdEl.value || defaultRunId();
+        comparisonCameraSelectEl.innerHTML = spec.cameras
+          .map(
+            (camera) =>
+              `<option value="${camera}" ${camera === "camera5" ? "selected" : ""}>${camera}</option>`
+          )
+          .join("");
+        comparisonCommonArgsEl.innerHTML = Object.entries(spec.args)
+          .map(([name, argSpec]) => renderInput("comparison_common", name, argSpec))
+          .join("");
+        comparisonVariantsJsonEl.value = JSON.stringify(spec.variants, null, 2);
+        comparisonNoteEl.textContent =
+          "Auto isolation rewrites namespace and output topics per variant.";
+        [
+          comparisonRunIdEl,
+          comparisonCameraSelectEl,
+          comparisonAutoIsolateEl,
+          comparisonCommonArgsEl,
+          comparisonVariantsJsonEl,
+        ].forEach((element) => {
+          element.addEventListener("input", () => previewComparison().catch(() => {}));
+          element.addEventListener("change", () => previewComparison().catch(() => {}));
+        });
+        previewComparison().catch((error) => setStatus(error.message, true));
+      }
+
+      function readComparisonPayload() {
+        let variants;
+        try {
+          variants = JSON.parse(comparisonVariantsJsonEl.value || "[]");
+        } catch (error) {
+          throw new Error(`Invalid variants JSON: ${error.message}`);
+        }
+        return {
+          run_id: comparisonRunIdEl.value.trim() || defaultRunId(),
+          camera_namespace: comparisonCameraSelectEl.value,
+          auto_isolate: comparisonAutoIsolateEl.checked,
+          common_args: readArgs(comparisonCommonArgsEl),
+          variants,
         };
       }
 
@@ -1032,6 +1283,40 @@
         await refreshLogs();
       }
 
+      async function previewComparison() {
+        const spec = state.modelComparison;
+        if (!spec) {
+          return;
+        }
+        const result = await request("/api/preview_comparison", {
+          method: "POST",
+          body: JSON.stringify(readComparisonPayload()),
+        });
+        comparisonPreviewBoxEl.textContent = result.processes
+          .map(
+            (process) =>
+              `[${process.variant_id}]\n${process.command.join(" ")}\noutputs=${JSON.stringify(
+                process.outputs,
+                null,
+                2
+              )}`
+          )
+          .join("\n\n");
+      }
+
+      async function startComparison() {
+        const result = await request("/api/start_comparison", {
+          method: "POST",
+          body: JSON.stringify(readComparisonPayload()),
+        });
+        if (result.processes.length > 0) {
+          state.selectedProcessId = result.processes[0].id;
+        }
+        setStatus(`Started comparison ${result.run_id} with ${result.processes.length} variant(s)`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
       async function stopProcess(id) {
         await request("/api/stop", {
           method: "POST",
@@ -1061,6 +1346,25 @@
         } else {
           setStatus("No exited processes to close");
         }
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function stopGroup(groupId) {
+        const result = await request("/api/stop_group", {
+          method: "POST",
+          body: JSON.stringify({ group_id: groupId }),
+        });
+        setStatus(`Stopped ${result.processes.length} process(es) in ${groupId}`);
+        await refreshProcesses();
+      }
+
+      async function closeGroup(groupId) {
+        const result = await request("/api/close_group", {
+          method: "POST",
+          body: JSON.stringify({ group_id: groupId }),
+        });
+        setStatus(`Closed ${result.processes.length} exited process(es) in ${groupId}`);
         await refreshProcesses();
         await refreshLogs();
       }
@@ -1164,6 +1468,12 @@
         processListEl.querySelectorAll("[data-close]").forEach((button) => {
           button.addEventListener("click", () => closeProcess(button.dataset.close));
         });
+        processListEl.querySelectorAll("[data-stop-group]").forEach((button) => {
+          button.addEventListener("click", () => stopGroup(button.dataset.stopGroup));
+        });
+        processListEl.querySelectorAll("[data-close-group]").forEach((button) => {
+          button.addEventListener("click", () => closeGroup(button.dataset.closeGroup));
+        });
         processListEl.querySelectorAll("[data-log]").forEach((button) => {
           button.addEventListener("click", async () => {
             state.selectedProcessId = button.dataset.log;
@@ -1178,14 +1488,29 @@
       function renderProcess(process) {
         const stateClass = process.running ? "running" : "exited";
         const stateText = process.running ? "running" : `exit ${process.returncode}`;
+        const groupMeta = process.group_id
+          ? `<div class="meta">group=${escapeHtml(process.group_id)} variant=${escapeHtml(
+              process.variant_id || ""
+            )}</div>`
+          : "";
+        const outputMeta =
+          process.outputs && Object.keys(process.outputs).length
+            ? `<div class="meta">${escapeHtml(JSON.stringify(process.outputs))}</div>`
+            : "";
+        const groupActions = process.group_id
+          ? `<button data-stop-group="${process.group_id}" class="danger">Stop Group</button>
+             <button data-close-group="${process.group_id}">Close Group</button>`
+          : "";
         return `<div class="process ${process.id === state.selectedProcessId ? "selected" : ""}">
           <div class="process-top">
             <div>
               <strong>${process.label}</strong>
               <div class="meta">${process.id} pid=${process.pid} log=${process.log_path}</div>
+              ${groupMeta}
             </div>
             <span class="pill ${stateClass}">${stateText}</span>
           </div>
+          ${outputMeta}
           <div class="codebox">${process.command.join(" ")}</div>
           <div class="actions">
             <button data-log="${process.id}">Logs</button>
@@ -1193,6 +1518,7 @@
               Stop
             </button>
             <button data-close="${process.id}" ${process.running ? "disabled" : ""}>Close</button>
+            ${groupActions}
           </div>
         </div>`;
       }
@@ -1212,11 +1538,13 @@
           state.launchers = registry.launchers;
           state.multiYolox = registry.multi_yolox;
           state.tlrValidation = registry.tlr_validation;
+          state.modelComparison = registry.model_comparison;
           state.selectedLauncherId = state.launchers[0]?.id || null;
           renderLaunchers();
           renderLauncherForm();
           renderMultiYolox();
           renderTlrValidation();
+          renderModelComparison();
           renderValidationTabs();
           renderBagPlayer();
           await refreshProcesses();
@@ -1243,11 +1571,20 @@
       document.getElementById("startTlrBtn").addEventListener("click", () => {
         startTlr().catch((error) => setStatus(error.message, true));
       });
+      document.getElementById("previewComparisonBtn").addEventListener("click", () => {
+        previewComparison().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startComparisonBtn").addEventListener("click", () => {
+        startComparison().catch((error) => setStatus(error.message, true));
+      });
       yoloxTabBtn.addEventListener("click", () => {
         switchValidationTab("yolox");
       });
       tlrTabBtn.addEventListener("click", () => {
         switchValidationTab("tlr");
+      });
+      comparisonTabBtn.addEventListener("click", () => {
+        switchValidationTab("comparison");
       });
       document.getElementById("stopAllBtn").addEventListener("click", () => {
         stopAll().catch((error) => setStatus(error.message, true));
