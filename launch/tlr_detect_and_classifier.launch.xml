@@ -13,8 +13,7 @@
   <arg name="detector_ml_package_name" default="traffic_light_detector" description="traffic light detector ML package directory name"/>
   <arg name="detector_ml_package_path" default="$(var data_path)/$(var detector_ml_package_name)" description="traffic light detector ML package directory"/>
   <arg name="detector_runtime_param_path" default="$(find-pkg-share autoware_ml_model_launchers)/config/tlr_tensorrt_yolox.param.yaml" description="YOLOX traffic light detector runtime parameter file"/>
-  <arg name="detector_param_suffix" default="" description="model variant suffix selecting ml_package_yolox&lt;suffix&gt;.param.yaml within detector_ml_package_path; include the leading dot, e.g. '.1280x1280_20260703_best'"/>
-  <arg name="detector_param_path" default="$(var detector_ml_package_path)/ml_package_yolox$(var detector_param_suffix).param.yaml" description="YOLOX traffic light detector ML package parameter file"/>
+  <arg name="detector_param_path" default="$(var detector_ml_package_path)/ml_package_yolox.param.yaml" description="YOLOX traffic light detector ML package parameter file"/>
   <arg name="classifier_model_folder_name" default="traffic_light_classifier" description="traffic light classifier model folder name"/>
 
   <arg name="car_classifier_model_name" default="traffic_light_classifier_mobilenetv2_batch_6.onnx" description="car traffic light classifier model file"/>

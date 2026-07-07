@@ -182,14 +182,6 @@ launchers:
         type: string
         default:
         group: advanced
-      detector_param_suffix:
-        type: string
-        default: ""
-        suggestions:
-          - ""
-          - .1280x1280_20260703_best
-          - .1920x1280_20260706_best
-        group: model
       detector_param_path:
         type: string
         default:
@@ -373,14 +365,6 @@ tlr_validation:
       suggestions:
         - traffic_light_detector
       group: model
-    detector_param_suffix:
-      type: string
-      default: ""
-      suggestions:
-        - ""
-        - .1280x1280_20260703_best
-        - .1920x1280_20260706_best
-      group: model
 
 model_comparison:
   cameras:
@@ -447,7 +431,7 @@ model_comparison:
         enable_classification: false
         data_path: /home/yoshiri/autoware_data/TLRtest
         detector_ml_package_name: traffic_light_detector
-        detector_param_suffix: .1280x1280_20260703_best
+        detector_param_path: /home/yoshiri/autoware_data/TLRtest/traffic_light_detector/ml_package_yolox.1280x1280_20260703_best.param.yaml
     - id: tlr_1920x1280_20260706
       label: TLR 1920x1280 20260706
       launcher_id: tlr_detect_and_classifier
@@ -455,4 +439,4 @@ model_comparison:
         enable_classification: false
         data_path: /home/yoshiri/autoware_data/TLRtest
         detector_ml_package_name: traffic_light_detector
-        detector_param_suffix: .1920x1280_20260706_best
+        detector_param_path: /home/yoshiri/autoware_data/TLRtest/traffic_light_detector/ml_package_yolox.1920x1280_20260706_best.param.yaml

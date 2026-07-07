@@ -59,6 +59,7 @@ def test_multi_yolox_registry_exposes_cameras_and_groups():
 def test_tlr_validation_registry_builds_command():
     registry = load_registry(default_registry_path())
     payload = registry.to_json()["tlr_validation"]
+    removed_arg = "detector_param" + "_suffix"
     command = build_launch_command(
         registry.get(payload["launcher_id"]),
         {
@@ -73,6 +74,7 @@ def test_tlr_validation_registry_builds_command():
     assert payload["cameras"][:5] == ["camera0", "camera1", "camera2", "camera3", "camera4"]
     assert payload["args"]["enable_classification"]["group"] == "mode"
     assert payload["args"]["detector_ml_package_name"]["group"] == "model"
+    assert removed_arg not in payload["args"]
     assert command[:4] == [
         "ros2",
         "launch",
@@ -84,6 +86,7 @@ def test_tlr_validation_registry_builds_command():
     assert "use_sim_time:=true" in command
     assert "enable_classification:=true" in command
     assert "detector_ml_package_name:=traffic_light_detector" in command
+    assert not any(item.startswith(f"{removed_arg}:=") for item in command)
     assert not any(item.startswith("yolox_model_path:=") for item in command)
     assert not any(item.startswith("yolox_label_path:=") for item in command)
 
@@ -91,6 +94,7 @@ def test_tlr_validation_registry_builds_command():
 def test_model_comparison_registry_exposes_variants_and_isolation():
     registry = load_registry(default_registry_path())
     payload = registry.to_json()["model_comparison"]
+    removed_arg = "detector_param" + "_suffix"
     yolox = registry.get("yolox_camera")
     tlr = registry.get("tlr_detect_and_classifier")
 
@@ -98,6 +102,7 @@ def test_model_comparison_registry_exposes_variants_and_isolation():
     assert payload["variants"][0]["id"] == "yolox_960"
     assert payload["variants"][1]["args"]["model_name"] == "yolox-sPlus-T4-640x640-debris.onnx"
     assert payload["variants"][2]["args"]["detector_ml_package_name"] == "traffic_light_detector"
+    assert all(removed_arg not in variant["args"] for variant in payload["variants"])
     assert payload["args"]["use_sim_time"]["default"] is True
     assert yolox.isolation is not None
     assert tlr.isolation is not None
