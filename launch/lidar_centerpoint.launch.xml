@@ -3,8 +3,8 @@
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="/perception/object_recognition/detection/centerpoint/objects"/>
   <arg name="data_path" default="/opt/autoware/mlmodels"/>
-  <arg name="model_name" default="centerpoint_tiny"/>
-  <arg name="model_path" default="$(var data_path)/lidar_centerpoint"/>
+  <arg name="model_name" default="centerpoint"/>
+  <arg name="model_path" default="$(var data_path)/centerpoint"/>
   <arg name="build_only" default="false"/>
 
   <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">

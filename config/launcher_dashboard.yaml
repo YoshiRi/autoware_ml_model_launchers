@@ -186,6 +186,69 @@ launchers:
         type: string
         default:
         group: advanced
+      classifier_model_folder_name:
+        type: string
+        default: traffic_light_classifier
+        suggestions:
+          - traffic_light_classifier
+        group: model
+      car_classifier_model_name:
+        type: string
+        default: traffic_light_classifier_mobilenetv2_batch_6.onnx
+        suggestions:
+          - traffic_light_classifier_mobilenetv2_batch_6.onnx
+          - traffic_light_lamp_recognizer_comlops.onnx
+        group: model
+      car_classifier_model_path:
+        type: string
+        default:
+        group: advanced
+      car_classifier_label_path:
+        type: string
+        default:
+        group: advanced
+      car_classifier_param_path:
+        type: string
+        default:
+        group: advanced
+      car_classifier_type:
+        type: string
+        default: "1"
+        choices:
+          - "0"
+          - "1"
+          - "2"
+        group: model
+      lamp_recognizer_ml_param_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_model_name:
+        type: string
+        default: ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+        suggestions:
+          - ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+        group: model
+      pedestrian_classifier_model_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_label_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_param_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_type:
+        type: string
+        default: "1"
+        choices:
+          - "0"
+          - "1"
+          - "2"
+        group: model
       output/detected_objects:
         type: string
         default:
@@ -364,6 +427,41 @@ tlr_validation:
       default: traffic_light_detector
       suggestions:
         - traffic_light_detector
+      group: model
+    classifier_model_folder_name:
+      type: string
+      default: traffic_light_classifier
+      suggestions:
+        - traffic_light_classifier
+      group: model
+    car_classifier_model_name:
+      type: string
+      default: traffic_light_classifier_mobilenetv2_batch_6.onnx
+      suggestions:
+        - traffic_light_classifier_mobilenetv2_batch_6.onnx
+        - traffic_light_lamp_recognizer_comlops.onnx
+      group: model
+    car_classifier_type:
+      type: string
+      default: "1"
+      choices:
+        - "0"
+        - "1"
+        - "2"
+      group: model
+    pedestrian_classifier_model_name:
+      type: string
+      default: ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+      suggestions:
+        - ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+      group: model
+    pedestrian_classifier_type:
+      type: string
+      default: "1"
+      choices:
+        - "0"
+        - "1"
+        - "2"
       group: model
 
 model_comparison:

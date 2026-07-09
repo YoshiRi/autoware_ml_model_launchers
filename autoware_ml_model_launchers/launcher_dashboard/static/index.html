@@ -782,6 +782,16 @@
             spec.default ? "checked" : ""
           } />${name}</label>`;
         }
+        if (spec.choices && spec.choices.length > 0) {
+          return `<label>${name}<select id="${id}" data-name="${name}" data-type="${spec.type}" data-omit-empty="false">${spec.choices
+            .map(
+              (item) =>
+                `<option value="${escapeHtml(item)}" ${
+                  item === String(spec.default ?? "") ? "selected" : ""
+                }>${escapeHtml(item)}</option>`
+            )
+            .join("")}</select></label>`;
+        }
         const inputType = spec.type === "int" || spec.type === "float" ? "number" : "text";
         const omitEmpty = spec.default == null ? "true" : "false";
         const listId =
@@ -991,7 +1001,14 @@
         const camera = args.camera_namespace || "camera5";
         const dataPath = args.data_path || "/opt/autoware/mlmodels";
         const packageName = args.detector_ml_package_name || "traffic_light_detector";
+        const classifierFolder = args.classifier_model_folder_name || "traffic_light_classifier";
+        const carClassifierModel =
+          args.car_classifier_model_name || "traffic_light_classifier_mobilenetv2_batch_6.onnx";
+        const pedestrianClassifierModel =
+          args.pedestrian_classifier_model_name ||
+          "ped_traffic_light_classifier_mobilenetv2_batch_6.onnx";
         const packagePath = pathJoin(dataPath, packageName);
+        const classifierPath = pathJoin(dataPath, classifierFolder);
         const inputImage = `/sensing/camera/${camera}/image_raw`;
         const detectorParam = pathJoin(packagePath, "ml_package_yolox.param.yaml");
         const runtimeParam =
@@ -1016,6 +1033,19 @@
           wiringRow("runtime", runtimeParam),
           wiringRow("ml param", detectorParam),
           wiringRow("classify", classifierState),
+          wiringRow(
+            "classifier",
+            [
+              `car type ${args.car_classifier_type || "1"}: ${pathJoin(
+                classifierPath,
+                carClassifierModel
+              )}`,
+              `ped type ${args.pedestrian_classifier_type || "1"}: ${pathJoin(
+                classifierPath,
+                pedestrianClassifierModel
+              )}`,
+            ].join("\n")
+          ),
           wiringRow("outputs", outputLines.join("\n")),
         ].join("");
       }
