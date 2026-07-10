@@ -478,9 +478,13 @@ model_comparison:
     - camera9
     - camera10
   args:
+    # Each variant subscribes to the same input/image topic, so decompressing
+    # per-variant would run a redundant decompressor per variant. Default to
+    # false and decompress once upstream (driver or a separately-launched
+    # decompressor), enabling it per-run only when no raw feed exists yet.
     use_decompress:
       type: bool
-      default: true
+      default: false
       group: basic
     use_sim_time:
       type: bool

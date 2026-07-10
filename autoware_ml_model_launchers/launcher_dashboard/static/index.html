@@ -499,6 +499,7 @@
             <div class="actions">
               <button id="previewBtn">Preview</button>
               <button id="startBtn" class="primary">Start</button>
+              <button id="copyPreviewBtn" type="button">Copy Command</button>
             </div>
             <pre id="previewBox">Select a launcher.</pre>
 
@@ -556,6 +557,7 @@
                 <div class="actions">
                   <button id="previewTlrBtn">Preview TLR</button>
                   <button id="startTlrBtn" class="primary">Start TLR</button>
+                  <button id="copyTlrPreviewBtn" type="button">Copy Command</button>
                 </div>
                 <pre id="tlrPreviewBox">TLR validation is not configured.</pre>
                 <div class="status-line warning" id="tlrNote"></div>
@@ -588,7 +590,9 @@
                   <button id="previewComparisonBtn">Preview Comparison</button>
                   <button id="startComparisonBtn" class="primary">Start Comparison</button>
                 </div>
-                <pre id="comparisonPreviewBox">Comparison preset is not configured.</pre>
+                <div id="comparisonPreviewBox" class="process-list">
+                  <div class="status-line">Comparison preset is not configured.</div>
+                </div>
                 <div class="status-line warning" id="comparisonNote"></div>
               </div>
             </div>
@@ -680,6 +684,8 @@
         bagBrowserEntries: [],
         bagBrowserParent: null,
         reportedFailures: new Set(),
+        comparisonCommandsByVariant: new Map(),
+        processCommandsById: new Map(),
       };
 
       const statusEl = document.getElementById("status");
@@ -752,6 +758,31 @@
       function setStatus(text, isError = false) {
         statusEl.textContent = text;
         statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+      }
+
+      async function copyText(text) {
+        if (!text) {
+          setStatus("Nothing to copy yet.", true);
+          return;
+        }
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const scratch = document.createElement("textarea");
+            scratch.value = text;
+            scratch.style.position = "fixed";
+            scratch.style.opacity = "0";
+            document.body.appendChild(scratch);
+            scratch.focus();
+            scratch.select();
+            document.execCommand("copy");
+            scratch.remove();
+          }
+          setStatus("Command copied to clipboard.");
+        } catch (error) {
+          setStatus(`Copy failed: ${error.message}`, true);
+        }
       }
 
       function escapeHtml(value) {
@@ -1322,16 +1353,28 @@
           method: "POST",
           body: JSON.stringify(readComparisonPayload()),
         });
-        comparisonPreviewBoxEl.textContent = result.processes
+        state.comparisonCommandsByVariant = new Map(
+          result.processes.map((process) => [process.variant_id, process.command.join(" ")])
+        );
+        comparisonPreviewBoxEl.innerHTML = result.processes
           .map(
-            (process) =>
-              `[${process.variant_id}]\n${process.command.join(" ")}\noutputs=${JSON.stringify(
-                process.outputs,
-                null,
-                2
-              )}`
+            (process) => `<div class="process">
+              <div class="process-top">
+                <strong>${escapeHtml(process.variant_id)}</strong>
+                <button type="button" data-copy-variant="${escapeHtml(process.variant_id)}">
+                  Copy Command
+                </button>
+              </div>
+              <div class="codebox">${escapeHtml(process.command.join(" "))}</div>
+              <div class="meta">outputs=${escapeHtml(JSON.stringify(process.outputs))}</div>
+            </div>`
           )
-          .join("\n\n");
+          .join("");
+        comparisonPreviewBoxEl.querySelectorAll("[data-copy-variant]").forEach((button) => {
+          button.addEventListener("click", () =>
+            copyText(state.comparisonCommandsByVariant.get(button.dataset.copyVariant))
+          );
+        });
       }
 
       async function startComparison() {
@@ -1489,11 +1532,19 @@
           setStatus(`${failed.label} exited with code ${failed.returncode}; showing logs`, true);
         }
 
+        state.processCommandsById = new Map(
+          result.processes.map((process) => [process.id, process.command.join(" ")])
+        );
         processListEl.innerHTML = result.processes.length
           ? result.processes.map(renderProcess).join("")
           : `<div class="status-line">No managed processes.</div>`;
         processListEl.querySelectorAll("[data-stop]").forEach((button) => {
           button.addEventListener("click", () => stopProcess(button.dataset.stop));
+        });
+        processListEl.querySelectorAll("[data-copy-command]").forEach((button) => {
+          button.addEventListener("click", () =>
+            copyText(state.processCommandsById.get(button.dataset.copyCommand))
+          );
         });
         processListEl.querySelectorAll("[data-close]").forEach((button) => {
           button.addEventListener("click", () => closeProcess(button.dataset.close));
@@ -1544,6 +1595,7 @@
           <div class="codebox">${process.command.join(" ")}</div>
           <div class="actions">
             <button data-log="${process.id}">Logs</button>
+            <button data-copy-command="${process.id}">Copy Command</button>
             <button class="danger" data-stop="${process.id}" ${process.running ? "" : "disabled"}>
               Stop
             </button>
@@ -1592,6 +1644,9 @@
       document.getElementById("startBtn").addEventListener("click", () => {
         startLauncher().catch((error) => setStatus(error.message, true));
       });
+      document.getElementById("copyPreviewBtn").addEventListener("click", () => {
+        copyText(previewBoxEl.textContent.startsWith("ros2") ? previewBoxEl.textContent : "");
+      });
       document.getElementById("startMultiBtn").addEventListener("click", () => {
         startMultiYolox().catch((error) => setStatus(error.message, true));
       });
@@ -1600,6 +1655,11 @@
       });
       document.getElementById("startTlrBtn").addEventListener("click", () => {
         startTlr().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("copyTlrPreviewBtn").addEventListener("click", () => {
+        copyText(
+          tlrPreviewBoxEl.textContent.startsWith("ros2") ? tlrPreviewBoxEl.textContent : ""
+        );
       });
       document.getElementById("previewComparisonBtn").addEventListener("click", () => {
         previewComparison().catch((error) => setStatus(error.message, true));
