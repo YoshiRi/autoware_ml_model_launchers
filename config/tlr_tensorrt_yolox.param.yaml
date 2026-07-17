@@ -1,0 +1,31 @@
+# cspell: ignore semseg
+/**:
+  ros__parameters:
+    # Runtime postprocess tuning
+    score_threshold: 0.35
+    nms_threshold: 0.7
+
+    # Runtime execution control
+    preprocess_on_gpu: true # If true, pre-processing is performed on GPU.
+    gpu_id: 0 # GPU ID to select CUDA Device.
+
+    # Runtime device assignment
+    dla_core_id: -1 # If a positive ID value is specified, the node assigns inference task to the DLA core.
+
+    # Debug / profiling
+    profile_per_layer: false # If true, profiler function will be enabled. Since this may affect execution speed, enable only for development.
+
+    # Default params of tensorrt_yolox package, only effective for semantic segmentation models.
+    is_roi_overlap_segmentation: false
+    overlap_roi_score_threshold: 0.3
+    is_publish_color_mask: false
+    roi_overlay_segmentation_label:
+      UNKNOWN: false
+      CAR: false
+      TRUCK: false
+      BUS: false
+      MOTORCYCLE: false
+      BICYCLE: false
+      PEDESTRIAN: false
+      ANIMAL: false
+      HAZARD: false

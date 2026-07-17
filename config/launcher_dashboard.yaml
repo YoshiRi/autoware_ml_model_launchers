@@ -1,0 +1,544 @@
+launchers:
+  yolox_camera:
+    label: YOLOX Camera
+    package: autoware_ml_model_launchers
+    file: yolox_camera.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: true
+      use_sim_time:
+        type: bool
+        default: true
+      build_only:
+        type: bool
+        default: false
+      enable_bytetrack:
+        type: bool
+        default: true
+      enable_bytetrack_visualizer:
+        type: bool
+        default: false
+      model_name:
+        type: string
+        default: yolox-sPlus-T4-960x960-debris.onnx
+      data_path:
+        type: string
+        default: /opt/autoware/mlmodels
+      node_namespace:
+        type: string
+        default:
+        group: advanced
+      input/image:
+        type: string
+        default:
+        group: advanced
+      output/objects:
+        type: string
+        default:
+        group: advanced
+      output/mask:
+        type: string
+        default:
+        group: advanced
+      output/tracked_objects:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      arg_templates:
+        node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+      output_args:
+        output/objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/rois
+        output/mask: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/mask
+        output/tracked_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/tracked_rois
+
+  all_single_camera_detection:
+    label: Single Camera Detection
+    package: autoware_ml_model_launchers
+    file: all_single_camera_detection.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: true
+      use_sim_time:
+        type: bool
+        default: true
+      build_only:
+        type: bool
+        default: false
+      enable_yolox:
+        type: bool
+        default: true
+      enable_bytetrack:
+        type: bool
+        default: true
+      enable_bytetrack_visualizer:
+        type: bool
+        default: false
+      enable_tlr:
+        type: bool
+        default: false
+      enable_tlr_classification:
+        type: bool
+        default: false
+      data_path:
+        type: string
+        default: /opt/autoware/mlmodels
+      node_namespace:
+        type: string
+        default:
+        group: advanced
+      input/image:
+        type: string
+        default:
+        group: advanced
+      object_yolox_output_objects:
+        type: string
+        default:
+        group: advanced
+      object_yolox_output_mask:
+        type: string
+        default:
+        group: advanced
+      object_yolox_output_tracked_objects:
+        type: string
+        default:
+        group: advanced
+      tlr_output_detected_objects:
+        type: string
+        default:
+        group: advanced
+      tlr_output_rois:
+        type: string
+        default:
+        group: advanced
+      tlr_output_traffic_signals:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      arg_templates:
+        node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+      output_args:
+        object_yolox_output_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/rois
+        object_yolox_output_mask: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/mask
+        object_yolox_output_tracked_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/tracked_rois
+        tlr_output_detected_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/yolox/objects
+        tlr_output_rois: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/rois
+        tlr_output_traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/traffic_signals
+
+  tlr_detect_and_classifier:
+    label: TLR Detection/Classification
+    package: autoware_ml_model_launchers
+    file: tlr_detect_and_classifier.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      use_decompress:
+        type: bool
+        default: true
+      use_sim_time:
+        type: bool
+        default: true
+      build_only:
+        type: bool
+        default: false
+      enable_classification:
+        type: bool
+        default: true
+      data_path:
+        type: string
+        default: /opt/autoware/mlmodels
+        suggestions:
+          - /opt/autoware/mlmodels
+          - /home/yoshiri/autoware_data/TLRtest
+      node_namespace:
+        type: string
+        default:
+        group: advanced
+      input/image:
+        type: string
+        default:
+        group: advanced
+      detector_ml_package_name:
+        type: string
+        default: traffic_light_detector
+        suggestions:
+          - traffic_light_detector
+        group: model
+      detector_ml_package_path:
+        type: string
+        default:
+        group: model
+      detector_runtime_param_path:
+        type: string
+        default:
+        group: advanced
+      detector_param_path:
+        type: string
+        default:
+        group: advanced
+      classifier_model_folder_name:
+        type: string
+        default: traffic_light_classifier
+        suggestions:
+          - traffic_light_classifier
+        group: model
+      car_classifier_model_name:
+        type: string
+        default: traffic_light_classifier_mobilenetv2_batch_6.onnx
+        suggestions:
+          - traffic_light_classifier_mobilenetv2_batch_6.onnx
+          - traffic_light_lamp_recognizer_comlops.onnx
+        group: model
+      car_classifier_model_path:
+        type: string
+        default:
+        group: advanced
+      car_classifier_label_path:
+        type: string
+        default:
+        group: advanced
+      car_classifier_param_path:
+        type: string
+        default:
+        group: advanced
+      car_classifier_type:
+        type: string
+        default: "1"
+        choices:
+          - "0"
+          - "1"
+          - "2"
+        group: model
+      lamp_recognizer_ml_param_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_model_name:
+        type: string
+        default: ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+        suggestions:
+          - ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+        group: model
+      pedestrian_classifier_model_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_label_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_param_path:
+        type: string
+        default:
+        group: advanced
+      pedestrian_classifier_type:
+        type: string
+        default: "1"
+        choices:
+          - "0"
+          - "1"
+          - "2"
+        group: model
+      output/detected_objects:
+        type: string
+        default:
+        group: advanced
+      output/rois:
+        type: string
+        default:
+        group: advanced
+      output/car/traffic_signals:
+        type: string
+        default:
+        group: advanced
+      output/pedestrian/traffic_signals:
+        type: string
+        default:
+        group: advanced
+      output/traffic_signals:
+        type: string
+        default:
+        group: advanced
+      output/debug/image:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      arg_templates:
+        node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
+      output_args:
+        output/detected_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/yolox/objects
+        output/rois: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/rois
+        output/car/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/car_traffic_signals
+        output/pedestrian/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/pedestrian_traffic_signals
+        output/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/traffic_signals
+        output/debug/image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/debug/image
+
+  open_yolo:
+    label: Open YOLO
+    package: autoware_ml_model_launchers
+    file: open_yolo.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: camera5
+      input/image:
+        type: string
+        default:
+        group: advanced
+      model:
+        type: string
+        default: yolo11x.pt
+      device:
+        type: string
+        default: "0"
+      publish_debug_image:
+        type: bool
+        default: true
+      publish_debug_compressed:
+        type: bool
+        default: false
+      output/detections:
+        type: string
+        default:
+        group: advanced
+      output/debug_image:
+        type: string
+        default:
+        group: advanced
+      output/debug_compressed:
+        type: string
+        default:
+        group: advanced
+      output/predict_ms:
+        type: string
+        default:
+        group: advanced
+    isolation:
+      output_args:
+        output/detections: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/detections
+        output/debug_image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/debug/image
+        output/debug_compressed: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/debug/image/compressed
+        output/predict_ms: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/latency/infer_ms
+
+  streampetr_x2:
+    label: StreamPETR X2
+    package: autoware_ml_model_launchers
+    file: streampetr_x2.launch.xml
+    args:
+      build_only:
+        type: bool
+        default: false
+      use_sim_time:
+        type: bool
+        default: true
+      is_compressed_image:
+        type: bool
+        default: true
+      is_distorted_image:
+        type: bool
+        default: true
+      output/objects:
+        type: string
+        default: /perception/object_recognition/detection/streampetr/objects3
+
+multi_yolox:
+  launcher_id: yolox_camera
+  cameras:
+    - camera0
+    - camera1
+    - camera2
+    - camera3
+    - camera4
+    - camera5
+    - camera6
+    - camera7
+    - camera8
+    - camera9
+    - camera10
+  args:
+    use_decompress:
+      type: bool
+      default: true
+      group: basic
+    use_sim_time:
+      type: bool
+      default: true
+      group: basic
+    enable_bytetrack:
+      type: bool
+      default: true
+      group: addon
+    enable_bytetrack_visualizer:
+      type: bool
+      default: false
+      group: addon
+
+tlr_validation:
+  launcher_id: tlr_detect_and_classifier
+  cameras:
+    - camera0
+    - camera1
+    - camera2
+    - camera3
+    - camera4
+    - camera5
+    - camera6
+    - camera7
+    - camera8
+    - camera9
+    - camera10
+  args:
+    use_decompress:
+      type: bool
+      default: true
+      group: basic
+    use_sim_time:
+      type: bool
+      default: true
+      group: basic
+    build_only:
+      type: bool
+      default: false
+      group: basic
+    enable_classification:
+      type: bool
+      default: true
+      group: mode
+    data_path:
+      type: string
+      default: /opt/autoware/mlmodels
+      suggestions:
+        - /opt/autoware/mlmodels
+        - /home/yoshiri/autoware_data/TLRtest
+      group: model
+    detector_ml_package_name:
+      type: string
+      default: traffic_light_detector
+      suggestions:
+        - traffic_light_detector
+      group: model
+    classifier_model_folder_name:
+      type: string
+      default: traffic_light_classifier
+      suggestions:
+        - traffic_light_classifier
+      group: model
+    car_classifier_model_name:
+      type: string
+      default: traffic_light_classifier_mobilenetv2_batch_6.onnx
+      suggestions:
+        - traffic_light_classifier_mobilenetv2_batch_6.onnx
+        - traffic_light_lamp_recognizer_comlops.onnx
+      group: model
+    car_classifier_type:
+      type: string
+      default: "1"
+      choices:
+        - "0"
+        - "1"
+        - "2"
+      group: model
+    pedestrian_classifier_model_name:
+      type: string
+      default: ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+      suggestions:
+        - ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+      group: model
+    pedestrian_classifier_type:
+      type: string
+      default: "1"
+      choices:
+        - "0"
+        - "1"
+        - "2"
+      group: model
+
+model_comparison:
+  cameras:
+    - camera0
+    - camera1
+    - camera2
+    - camera3
+    - camera4
+    - camera5
+    - camera6
+    - camera7
+    - camera8
+    - camera9
+    - camera10
+  args:
+    # Each variant subscribes to the same input/image topic, so decompressing
+    # per-variant would run a redundant decompressor per variant. Default to
+    # false and decompress once upstream (driver or a separately-launched
+    # decompressor), enabling it per-run only when no raw feed exists yet.
+    use_decompress:
+      type: bool
+      default: false
+      group: basic
+    use_sim_time:
+      type: bool
+      default: true
+      group: basic
+    build_only:
+      type: bool
+      default: false
+      group: basic
+    data_path:
+      type: string
+      default: /opt/autoware/mlmodels
+      group: model
+  variants:
+    - id: yolox_960
+      label: YOLOX 960
+      launcher_id: yolox_camera
+      args:
+        enable_bytetrack: false
+        enable_bytetrack_visualizer: false
+        model_name: yolox-sPlus-T4-960x960-debris.onnx
+    - id: yolox_640
+      label: YOLOX 640
+      launcher_id: yolox_camera
+      args:
+        enable_bytetrack: false
+        enable_bytetrack_visualizer: false
+        model_name: yolox-sPlus-T4-640x640-debris.onnx
+    - id: tlr_detector
+      label: TLR Detector
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        detector_ml_package_name: traffic_light_detector
+    - id: tlr_960_20260629
+      label: TLR 960 20260629
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        data_path: /home/yoshiri/autoware_data/TLRtest
+        detector_ml_package_name: traffic_light_detector
+    - id: tlr_1280_20260703
+      label: TLR 1280 20260703
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        data_path: /home/yoshiri/autoware_data/TLRtest
+        detector_ml_package_name: traffic_light_detector
+        detector_param_path: /home/yoshiri/autoware_data/TLRtest/traffic_light_detector/ml_package_yolox.1280x1280_20260703_best.param.yaml
+    - id: tlr_1920x1280_20260706
+      label: TLR 1920x1280 20260706
+      launcher_id: tlr_detect_and_classifier
+      args:
+        enable_classification: false
+        data_path: /home/yoshiri/autoware_data/TLRtest
+        detector_ml_package_name: traffic_light_detector
+        detector_param_path: /home/yoshiri/autoware_data/TLRtest/traffic_light_detector/ml_package_yolox.1920x1280_20260706_best.param.yaml

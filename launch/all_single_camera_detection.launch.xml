@@ -32,13 +32,11 @@
   <arg name="object_yolox_output_tracked_objects" default="/perception/object_recognition/detection/$(var camera_namespace)/tracked/rois"/>
 
   <!-- Traffic light detector model args -->
-  <arg name="tlr_yolox_model_folder_name" default="traffic_light_detector" description="traffic light YOLOX detector model folder name"/>
+  <arg name="tlr_detector_ml_package_name" default="traffic_light_detector" description="traffic light detector ML package directory name"/>
+  <arg name="tlr_detector_ml_package_path" default="$(var data_path)/$(var tlr_detector_ml_package_name)" description="traffic light detector ML package directory"/>
+  <arg name="tlr_detector_runtime_param_path" default="$(find-pkg-share autoware_ml_model_launchers)/config/tlr_tensorrt_yolox.param.yaml" description="traffic light YOLOX detector runtime parameter file"/>
+  <arg name="tlr_detector_param_path" default="$(var tlr_detector_ml_package_path)/ml_package_yolox.param.yaml" description="traffic light detector ML package parameter file"/>
   <arg name="tlr_classifier_model_folder_name" default="traffic_light_classifier" description="traffic light classifier model folder name"/>
-  <arg name="tlr_yolox_model_name" default="yolox_s_car_ped_tl_detector_960_960_batch_1.onnx" description="traffic light YOLOX detector model file"/>
-  <arg name="tlr_yolox_model_path" default="$(var data_path)/$(var tlr_yolox_model_folder_name)/$(var tlr_yolox_model_name)" description="traffic light YOLOX detector model path"/>
-  <arg name="tlr_yolox_label_path" default="$(var data_path)/$(var tlr_yolox_model_folder_name)/car_ped_tl_detector_labels.txt" description="traffic light YOLOX detector label path"/>
-  <arg name="tlr_yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_traffic_light_detector.param.yaml" description="traffic light YOLOX detector param path"/>
-  <arg name="tlr_yolox_roi_remap_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/traffic_light_roi_label_remap.csv" description="traffic light YOLOX ROI label remap path"/>
 
   <!-- Traffic light classifier model args -->
   <arg name="car_classifier_model_name" default="traffic_light_classifier_mobilenetv2_batch_6.onnx" description="car traffic light classifier model file"/>
@@ -105,13 +103,11 @@
       <arg name="enable_classification" value="$(var enable_tlr_classification)"/>
       <arg name="input/image" value="$(var input/image)"/>
       <arg name="data_path" value="$(var data_path)"/>
-      <arg name="yolox_model_folder_name" value="$(var tlr_yolox_model_folder_name)"/>
+      <arg name="detector_ml_package_name" value="$(var tlr_detector_ml_package_name)"/>
+      <arg name="detector_ml_package_path" value="$(var tlr_detector_ml_package_path)"/>
+      <arg name="detector_runtime_param_path" value="$(var tlr_detector_runtime_param_path)"/>
+      <arg name="detector_param_path" value="$(var tlr_detector_param_path)"/>
       <arg name="classifier_model_folder_name" value="$(var tlr_classifier_model_folder_name)"/>
-      <arg name="yolox_model_name" value="$(var tlr_yolox_model_name)"/>
-      <arg name="yolox_model_path" value="$(var tlr_yolox_model_path)"/>
-      <arg name="yolox_label_path" value="$(var tlr_yolox_label_path)"/>
-      <arg name="yolox_param_path" value="$(var tlr_yolox_param_path)"/>
-      <arg name="yolox_roi_remap_path" value="$(var tlr_yolox_roi_remap_path)"/>
       <arg name="car_classifier_model_name" value="$(var car_classifier_model_name)"/>
       <arg name="car_classifier_model_path" value="$(var car_classifier_model_path)"/>
       <arg name="car_classifier_label_path" value="$(var car_classifier_label_path)"/>

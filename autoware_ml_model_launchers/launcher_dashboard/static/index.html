@@ -1,0 +1,1734 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Launcher Dashboard</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f7fa;
+        --panel: #ffffff;
+        --ink: #1d2430;
+        --muted: #667085;
+        --line: #d7dee8;
+        --accent: #0f766e;
+        --accent-dark: #0b5f59;
+        --danger: #b42318;
+        --warn: #a15c07;
+        --soft: #eef3f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 14px 18px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      h2 {
+        font-size: 15px;
+      }
+
+      h3 {
+        font-size: 13px;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: 280px minmax(420px, 1fr) minmax(360px, 460px);
+        gap: 14px;
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 14px 18px 24px;
+      }
+
+      .panel {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .center-column {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        min-width: 0;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .stack {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .subsection {
+        display: grid;
+        gap: 12px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .settings-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .settings-group h3 {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .subsection-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .tabbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 8px;
+      }
+
+      .tab-button.active {
+        border-color: var(--accent);
+        background: #ecfdf7;
+        color: #064e3b;
+      }
+
+      .tab-panel {
+        display: grid;
+        gap: 12px;
+      }
+
+      .tab-panel[hidden] {
+        display: none;
+      }
+
+      .launcher-list {
+        display: grid;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .launcher-item,
+      button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .launcher-item {
+        width: 100%;
+        padding: 8px 10px;
+        text-align: left;
+      }
+
+      .launcher-item.active {
+        border-color: var(--accent);
+        background: #ecfdf7;
+        color: #064e3b;
+      }
+
+      button.primary {
+        border-color: var(--accent-dark);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      button.danger {
+        border-color: #8f1f17;
+        background: var(--danger);
+        color: #fff;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      label {
+        display: grid;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      textarea,
+      select {
+        width: 100%;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--ink);
+        padding: 0 9px;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 160px;
+        padding: 9px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        resize: vertical;
+      }
+
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+      }
+
+      .check-row {
+        display: flex;
+        min-height: 32px;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .grid-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .wide-field {
+        grid-column: 1 / -1;
+      }
+
+      .field-block {
+        display: grid;
+        gap: 5px;
+      }
+
+      .advanced-block {
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+
+      .advanced-block summary {
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .advanced-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding-top: 10px;
+      }
+
+      .path-picker {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .codebox,
+      pre {
+        overflow: auto;
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #101828;
+        color: #eef4ff;
+        padding: 10px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .process-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .process {
+        display: grid;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        background: #fbfcfe;
+      }
+
+      .process.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgb(15 118 110 / 0.12);
+      }
+
+      .process-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        padding: 0 8px;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .pill.running {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .pill.exited {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .status-line {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .wiring {
+        display: grid;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+
+      .wiring-row {
+        display: grid;
+        grid-template-columns: 130px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+      }
+
+      .wiring-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .wiring-value {
+        min-width: 0;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      .browser {
+        display: grid;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+
+      .browser[hidden] {
+        display: none;
+      }
+
+      .browser-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .browser-path {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .browser-list {
+        display: grid;
+        max-height: 240px;
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+
+      .browser-entry {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .browser-entry:last-child {
+        border-bottom: 0;
+      }
+
+      .browser-entry.playable {
+        background: #ecfdf7;
+      }
+
+      .warning {
+        color: var(--warn);
+      }
+
+      @media (max-width: 1180px) {
+        main {
+          grid-template-columns: 240px minmax(0, 1fr);
+        }
+
+        .right {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 760px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+
+        .grid-two,
+        .advanced-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="bar">
+        <h1>Launcher Dashboard</h1>
+        <div id="status" class="status-line">Loading</div>
+      </div>
+    </header>
+
+    <main>
+      <aside class="panel">
+        <div class="panel-head">
+          <h2>Launchers</h2>
+        </div>
+        <div id="launcherList" class="launcher-list"></div>
+      </aside>
+
+      <div class="center-column">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 id="launcherTitle">Launcher</h2>
+            <span id="launcherFile" class="pill"></span>
+          </div>
+          <div class="stack">
+            <div id="launcherForm" class="grid-two"></div>
+            <div class="actions">
+              <button id="previewBtn">Preview</button>
+              <button id="startBtn" class="primary">Start</button>
+              <button id="copyPreviewBtn" type="button">Copy Command</button>
+            </div>
+            <pre id="previewBox">Select a launcher.</pre>
+
+            <div class="subsection">
+              <div class="subsection-head">
+                <h2>Validation Presets</h2>
+                <span class="pill">tabs</span>
+              </div>
+              <div class="tabbar">
+                <button id="yoloxTabBtn" class="tab-button active">YOLOX Multi-Camera</button>
+                <button id="tlrTabBtn" class="tab-button">TLR Validation</button>
+                <button id="comparisonTabBtn" class="tab-button">Comparison</button>
+              </div>
+
+              <div id="yoloxTabPanel" class="tab-panel">
+                <div class="settings-group">
+                  <h3>Cameras</h3>
+                  <div id="cameraChecks" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Basic Settings</h3>
+                  <div id="multiBasicArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Add-On Nodes</h3>
+                  <div id="multiAddonArgs" class="grid-two"></div>
+                </div>
+                <div class="actions">
+                  <button id="startMultiBtn" class="primary">Start Selected</button>
+                </div>
+                <div class="status-line warning" id="multiNote"></div>
+              </div>
+
+              <div id="tlrTabPanel" class="tab-panel" hidden>
+                <div class="settings-group">
+                  <h3>Camera</h3>
+                  <select id="tlrCameraSelect"></select>
+                </div>
+                <div class="settings-group">
+                  <h3>Basic Settings</h3>
+                  <div id="tlrBasicArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Detection / Classification</h3>
+                  <div id="tlrModeArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Model Settings</h3>
+                  <div id="tlrModelArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Launch Wiring</h3>
+                  <div id="tlrWiring" class="wiring"></div>
+                </div>
+                <div class="actions">
+                  <button id="previewTlrBtn">Preview TLR</button>
+                  <button id="startTlrBtn" class="primary">Start TLR</button>
+                  <button id="copyTlrPreviewBtn" type="button">Copy Command</button>
+                </div>
+                <pre id="tlrPreviewBox">TLR validation is not configured.</pre>
+                <div class="status-line warning" id="tlrNote"></div>
+              </div>
+
+              <div id="comparisonTabPanel" class="tab-panel" hidden>
+                <div class="grid-two">
+                  <label>
+                    Run ID
+                    <input id="comparisonRunId" type="text" />
+                  </label>
+                  <label>
+                    Camera
+                    <select id="comparisonCameraSelect"></select>
+                  </label>
+                  <label class="check-row">
+                    <input id="comparisonAutoIsolate" type="checkbox" checked />
+                    auto isolate outputs
+                  </label>
+                </div>
+                <div class="settings-group">
+                  <h3>Common Settings</h3>
+                  <div id="comparisonCommonArgs" class="grid-two"></div>
+                </div>
+                <div class="settings-group">
+                  <h3>Variants JSON</h3>
+                  <textarea id="comparisonVariantsJson" spellcheck="false"></textarea>
+                </div>
+                <div class="actions">
+                  <button id="previewComparisonBtn">Preview Comparison</button>
+                  <button id="startComparisonBtn" class="primary">Start Comparison</button>
+                </div>
+                <div id="comparisonPreviewBox" class="process-list">
+                  <div class="status-line">Comparison preset is not configured.</div>
+                </div>
+                <div class="status-line warning" id="comparisonNote"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Bag Player</h2>
+            <span id="bagState" class="pill">idle</span>
+          </div>
+          <div class="stack">
+            <div class="grid-two">
+              <div class="wide-field field-block">
+                <label for="bagPath">Bag Path</label>
+                <div class="path-picker">
+                  <input id="bagPath" type="text" placeholder="/path/to/rosbag" />
+                  <button id="bagBrowseBtn">Browse</button>
+                </div>
+              </div>
+              <label>
+                Rate
+                <input id="bagRate" type="number" min="0.1" step="0.1" value="1.0" />
+              </label>
+              <label class="check-row">
+                <input id="bagLoop" type="checkbox" />
+                loop
+              </label>
+              <label class="check-row">
+                <input id="bagClock" type="checkbox" />
+                publish /clock
+              </label>
+              <label class="check-row">
+                <input id="bagStartPaused" type="checkbox" />
+                start paused
+              </label>
+            </div>
+            <div class="actions">
+              <button id="bagPlayBtn" class="primary">Play</button>
+              <button id="bagStopBtn" class="danger" disabled>Stop</button>
+              <button id="bagPauseBtn" disabled>Pause</button>
+              <button id="bagResumeBtn" disabled>Resume</button>
+              <button id="bagSlowerBtn" disabled>0.5x</button>
+              <button id="bagFasterBtn" disabled>2x</button>
+              <button id="bagSetRateBtn" disabled>Set Rate</button>
+            </div>
+            <div class="status-line warning" id="bagNote"></div>
+            <div id="bagBrowser" class="browser" hidden>
+              <div class="browser-head">
+                <div id="bagBrowserPath" class="meta browser-path"></div>
+                <button id="bagBrowserUpBtn">Up</button>
+                <button id="bagBrowserCloseBtn">Close</button>
+              </div>
+              <div id="bagBrowserList" class="browser-list"></div>
+            </div>
+            <pre id="bagCommandBox">No bag selected.</pre>
+            <h3>Bag Logs</h3>
+            <pre id="bagLogBox">No bag player started.</pre>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel right">
+        <div class="panel-head">
+          <h2>Processes</h2>
+          <div class="actions">
+            <button id="stopAllBtn" class="danger">Stop All</button>
+            <button id="closeAllBtn">Close All</button>
+          </div>
+        </div>
+        <div class="stack">
+          <div id="processList" class="process-list"></div>
+          <h3>Logs</h3>
+          <pre id="logBox">No process selected.</pre>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const state = {
+        launchers: [],
+        multiYolox: null,
+        tlrValidation: null,
+        modelComparison: null,
+        activeValidationTab: "yolox",
+        selectedLauncherId: null,
+        selectedProcessId: null,
+        bagPlayer: null,
+        bagBrowserEntries: [],
+        bagBrowserParent: null,
+        reportedFailures: new Set(),
+        comparisonCommandsByVariant: new Map(),
+        processCommandsById: new Map(),
+      };
+
+      const statusEl = document.getElementById("status");
+      const launcherListEl = document.getElementById("launcherList");
+      const launcherTitleEl = document.getElementById("launcherTitle");
+      const launcherFileEl = document.getElementById("launcherFile");
+      const launcherFormEl = document.getElementById("launcherForm");
+      const previewBoxEl = document.getElementById("previewBox");
+      const processListEl = document.getElementById("processList");
+      const logBoxEl = document.getElementById("logBox");
+      const cameraChecksEl = document.getElementById("cameraChecks");
+      const multiBasicArgsEl = document.getElementById("multiBasicArgs");
+      const multiAddonArgsEl = document.getElementById("multiAddonArgs");
+      const multiNoteEl = document.getElementById("multiNote");
+      const yoloxTabBtn = document.getElementById("yoloxTabBtn");
+      const tlrTabBtn = document.getElementById("tlrTabBtn");
+      const comparisonTabBtn = document.getElementById("comparisonTabBtn");
+      const yoloxTabPanel = document.getElementById("yoloxTabPanel");
+      const tlrTabPanel = document.getElementById("tlrTabPanel");
+      const comparisonTabPanel = document.getElementById("comparisonTabPanel");
+      const tlrCameraSelectEl = document.getElementById("tlrCameraSelect");
+      const tlrBasicArgsEl = document.getElementById("tlrBasicArgs");
+      const tlrModeArgsEl = document.getElementById("tlrModeArgs");
+      const tlrModelArgsEl = document.getElementById("tlrModelArgs");
+      const tlrWiringEl = document.getElementById("tlrWiring");
+      const tlrPreviewBoxEl = document.getElementById("tlrPreviewBox");
+      const tlrNoteEl = document.getElementById("tlrNote");
+      const comparisonRunIdEl = document.getElementById("comparisonRunId");
+      const comparisonCameraSelectEl = document.getElementById("comparisonCameraSelect");
+      const comparisonAutoIsolateEl = document.getElementById("comparisonAutoIsolate");
+      const comparisonCommonArgsEl = document.getElementById("comparisonCommonArgs");
+      const comparisonVariantsJsonEl = document.getElementById("comparisonVariantsJson");
+      const comparisonPreviewBoxEl = document.getElementById("comparisonPreviewBox");
+      const comparisonNoteEl = document.getElementById("comparisonNote");
+      const bagStateEl = document.getElementById("bagState");
+      const bagPathEl = document.getElementById("bagPath");
+      const bagRateEl = document.getElementById("bagRate");
+      const bagLoopEl = document.getElementById("bagLoop");
+      const bagClockEl = document.getElementById("bagClock");
+      const bagStartPausedEl = document.getElementById("bagStartPaused");
+      const bagNoteEl = document.getElementById("bagNote");
+      const bagCommandBoxEl = document.getElementById("bagCommandBox");
+      const bagLogBoxEl = document.getElementById("bagLogBox");
+      const bagPlayBtn = document.getElementById("bagPlayBtn");
+      const bagStopBtn = document.getElementById("bagStopBtn");
+      const bagPauseBtn = document.getElementById("bagPauseBtn");
+      const bagResumeBtn = document.getElementById("bagResumeBtn");
+      const bagSlowerBtn = document.getElementById("bagSlowerBtn");
+      const bagFasterBtn = document.getElementById("bagFasterBtn");
+      const bagSetRateBtn = document.getElementById("bagSetRateBtn");
+      const bagBrowseBtn = document.getElementById("bagBrowseBtn");
+      const bagBrowserEl = document.getElementById("bagBrowser");
+      const bagBrowserPathEl = document.getElementById("bagBrowserPath");
+      const bagBrowserListEl = document.getElementById("bagBrowserList");
+      const bagBrowserUpBtn = document.getElementById("bagBrowserUpBtn");
+      const bagBrowserCloseBtn = document.getElementById("bagBrowserCloseBtn");
+
+      async function request(path, options = {}) {
+        const response = await fetch(path, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || response.statusText);
+        }
+        return payload;
+      }
+
+      function setStatus(text, isError = false) {
+        statusEl.textContent = text;
+        statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+      }
+
+      async function copyText(text) {
+        if (!text) {
+          setStatus("Nothing to copy yet.", true);
+          return;
+        }
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const scratch = document.createElement("textarea");
+            scratch.value = text;
+            scratch.style.position = "fixed";
+            scratch.style.opacity = "0";
+            document.body.appendChild(scratch);
+            scratch.focus();
+            scratch.select();
+            document.execCommand("copy");
+            scratch.remove();
+          }
+          setStatus("Command copied to clipboard.");
+        } catch (error) {
+          setStatus(`Copy failed: ${error.message}`, true);
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (character) => {
+          const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+          return replacements[character];
+        });
+      }
+
+      function selectedLauncher() {
+        return state.launchers.find((item) => item.id === state.selectedLauncherId);
+      }
+
+      function inputId(prefix, name) {
+        return `${prefix}_${name.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      }
+
+      function renderInput(prefix, name, spec) {
+        const id = inputId(prefix, name);
+        if (spec.type === "bool") {
+          return `<label class="check-row"><input id="${id}" data-name="${name}" data-type="bool" type="checkbox" ${
+            spec.default ? "checked" : ""
+          } />${name}</label>`;
+        }
+        if (spec.choices && spec.choices.length > 0) {
+          return `<label>${name}<select id="${id}" data-name="${name}" data-type="${spec.type}" data-omit-empty="false">${spec.choices
+            .map(
+              (item) =>
+                `<option value="${escapeHtml(item)}" ${
+                  item === String(spec.default ?? "") ? "selected" : ""
+                }>${escapeHtml(item)}</option>`
+            )
+            .join("")}</select></label>`;
+        }
+        const inputType = spec.type === "int" || spec.type === "float" ? "number" : "text";
+        const omitEmpty = spec.default == null ? "true" : "false";
+        const listId =
+          spec.suggestions && spec.suggestions.length > 0 ? `${id}_suggestions` : "";
+        const dataList = listId
+          ? `<datalist id="${listId}">${spec.suggestions
+              .map((item) => `<option value="${escapeHtml(item)}"></option>`)
+              .join("")}</datalist>`
+          : "";
+        return `<label>${name}<input id="${id}" data-name="${name}" data-type="${spec.type}" data-omit-empty="${omitEmpty}" type="${inputType}" value="${
+          spec.default ?? ""
+        }" ${listId ? `list="${listId}"` : ""} />${dataList}</label>`;
+      }
+
+      function defaultRunId() {
+        const now = new Date();
+        const pad = (value) => String(value).padStart(2, "0");
+        return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(
+          now.getHours()
+        )}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      }
+
+      function readArgs(container) {
+        const args = {};
+        container.querySelectorAll("[data-name]").forEach((element) => {
+          const name = element.dataset.name;
+          if (element.dataset.type === "bool") {
+            args[name] = element.checked;
+          } else {
+            const value = element.value;
+            if (element.dataset.omitEmpty === "true" && value === "") {
+              return;
+            }
+            args[name] = value;
+          }
+        });
+        return args;
+      }
+
+      function pathJoin(root, leaf) {
+        return `${String(root || "").replace(/\/+$/, "")}/${String(leaf || "").replace(/^\/+/, "")}`;
+      }
+
+      function tlrTopic(camera, suffix) {
+        return `/perception/traffic_light_recognition/${camera}/${suffix}`;
+      }
+
+      function wiringRow(label, value) {
+        return `<div class="wiring-row"><div class="wiring-label">${escapeHtml(
+          label
+        )}</div><div class="wiring-value">${escapeHtml(value)}</div></div>`;
+      }
+
+      function renderLaunchers() {
+        launcherListEl.innerHTML = state.launchers
+          .map(
+            (launcher) =>
+              `<button class="launcher-item ${
+                launcher.id === state.selectedLauncherId ? "active" : ""
+              }" data-launcher="${launcher.id}">${launcher.label}</button>`
+          )
+          .join("");
+        launcherListEl.querySelectorAll("[data-launcher]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.selectedLauncherId = button.dataset.launcher;
+            renderLaunchers();
+            renderLauncherForm();
+          });
+        });
+      }
+
+      function renderLauncherForm() {
+        const launcher = selectedLauncher();
+        if (!launcher) {
+          launcherTitleEl.textContent = "Launcher";
+          launcherFileEl.textContent = "";
+          launcherFormEl.innerHTML = "";
+          return;
+        }
+        launcherTitleEl.textContent = launcher.label;
+        launcherFileEl.textContent = launcher.file;
+        const entries = Object.entries(launcher.args);
+        const primaryArgs = entries.filter(([, spec]) => (spec.group || "basic") !== "advanced");
+        const advancedArgs = entries.filter(([, spec]) => (spec.group || "basic") === "advanced");
+        const advancedHtml = advancedArgs.length
+          ? `<details class="advanced-block">
+              <summary>Advanced wiring overrides</summary>
+              <div class="advanced-grid">
+                ${advancedArgs.map(([name, spec]) => renderInput("arg", name, spec)).join("")}
+              </div>
+            </details>`
+          : "";
+        launcherFormEl.innerHTML = [
+          ...primaryArgs.map(([name, spec]) => renderInput("arg", name, spec)),
+          advancedHtml,
+        ].join("");
+        previewLauncher().catch((error) => setStatus(error.message, true));
+      }
+
+      function renderMultiYolox() {
+        const spec = state.multiYolox;
+        if (!spec) {
+          multiNoteEl.textContent = "No multi-camera preset is configured.";
+          return;
+        }
+        cameraChecksEl.innerHTML = spec.cameras
+          .map(
+            (camera, index) =>
+              `<label class="check-row"><input type="checkbox" data-camera="${camera}" ${
+                camera === "camera5" || index === 0 ? "checked" : ""
+              } />${camera}</label>`
+          )
+          .join("");
+        const basicArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "basic"
+        );
+        const addonArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "addon"
+        );
+        multiBasicArgsEl.innerHTML = basicArgs
+          .map(([name, argSpec]) => renderInput("multi_basic", name, argSpec))
+          .join("");
+        multiAddonArgsEl.innerHTML = addonArgs
+          .map(([name, argSpec]) => renderInput("multi_addon", name, argSpec))
+          .join("");
+        multiNoteEl.textContent = "Decompress and sim time are enabled by default.";
+      }
+
+      function switchValidationTab(tabName) {
+        state.activeValidationTab = tabName;
+        renderValidationTabs();
+      }
+
+      function renderValidationTabs() {
+        const isYolox = state.activeValidationTab === "yolox";
+        const isTlr = state.activeValidationTab === "tlr";
+        const isComparison = state.activeValidationTab === "comparison";
+        yoloxTabBtn.classList.toggle("active", isYolox);
+        tlrTabBtn.classList.toggle("active", isTlr);
+        comparisonTabBtn.classList.toggle("active", isComparison);
+        yoloxTabPanel.hidden = !isYolox;
+        tlrTabPanel.hidden = !isTlr;
+        comparisonTabPanel.hidden = !isComparison;
+      }
+
+      function renderTlrValidation() {
+        const spec = state.tlrValidation;
+        if (!spec) {
+          tlrNoteEl.textContent = "No TLR validation preset is configured.";
+          tlrPreviewBoxEl.textContent = "TLR validation is not configured.";
+          return;
+        }
+
+        tlrCameraSelectEl.innerHTML = spec.cameras
+          .map(
+            (camera) =>
+              `<option value="${camera}" ${camera === "camera5" ? "selected" : ""}>${camera}</option>`
+          )
+          .join("");
+        const basicArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "basic"
+        );
+        const modeArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "mode"
+        );
+        const modelArgs = Object.entries(spec.args).filter(
+          ([, argSpec]) => (argSpec.group || "basic") === "model"
+        );
+        tlrBasicArgsEl.innerHTML = basicArgs
+          .map(([name, argSpec]) => renderInput("tlr_basic", name, argSpec))
+          .join("");
+        tlrModeArgsEl.innerHTML = modeArgs
+          .map(([name, argSpec]) => renderInput("tlr_mode", name, argSpec))
+          .join("");
+        tlrModelArgsEl.innerHTML = modelArgs
+          .map(([name, argSpec]) => renderInput("tlr_model", name, argSpec))
+          .join("");
+        tlrNoteEl.textContent =
+          "Detector artifacts are loaded from the ML package param; classifiers remain optional.";
+        [tlrCameraSelectEl, tlrBasicArgsEl, tlrModeArgsEl, tlrModelArgsEl].forEach((element) => {
+          const update = () => {
+            renderTlrWiring();
+            previewTlr().catch(() => {});
+          };
+          element.addEventListener("input", update);
+          element.addEventListener("change", update);
+        });
+        renderTlrWiring();
+        previewTlr().catch((error) => setStatus(error.message, true));
+      }
+
+      function readTlrArgs() {
+        return {
+          camera_namespace: tlrCameraSelectEl.value,
+          ...readArgs(tlrBasicArgsEl),
+          ...readArgs(tlrModeArgsEl),
+          ...readArgs(tlrModelArgsEl),
+        };
+      }
+
+      function renderTlrWiring() {
+        if (!state.tlrValidation) {
+          tlrWiringEl.innerHTML = "";
+          return;
+        }
+        const args = readTlrArgs();
+        const camera = args.camera_namespace || "camera5";
+        const dataPath = args.data_path || "/opt/autoware/mlmodels";
+        const packageName = args.detector_ml_package_name || "traffic_light_detector";
+        const classifierFolder = args.classifier_model_folder_name || "traffic_light_classifier";
+        const carClassifierModel =
+          args.car_classifier_model_name || "traffic_light_classifier_mobilenetv2_batch_6.onnx";
+        const pedestrianClassifierModel =
+          args.pedestrian_classifier_model_name ||
+          "ped_traffic_light_classifier_mobilenetv2_batch_6.onnx";
+        const packagePath = pathJoin(dataPath, packageName);
+        const classifierPath = pathJoin(dataPath, classifierFolder);
+        const inputImage = `/sensing/camera/${camera}/image_raw`;
+        const detectorParam = pathJoin(packagePath, "ml_package_yolox.param.yaml");
+        const runtimeParam =
+          "$(find-pkg-share autoware_ml_model_launchers)/config/tlr_tensorrt_yolox.param.yaml";
+        const classifierState = args.enable_classification ? "enabled" : "disabled";
+        const decompressorState = args.use_decompress
+          ? `${inputImage}/compressed -> ${inputImage}`
+          : "disabled";
+        const outputLines = [
+          `objects: ${tlrTopic(camera, "detection/yolox/objects")}`,
+          `debug image: ${tlrTopic(camera, "detection/yolox/debug/image")}`,
+        ];
+        if (args.enable_classification) {
+          outputLines.push(`rois: ${tlrTopic(camera, "detection/rois")}`);
+          outputLines.push(`signals: ${tlrTopic(camera, "classification/traffic_signals")}`);
+        }
+
+        tlrWiringEl.innerHTML = [
+          wiringRow("input", inputImage),
+          wiringRow("decompress", decompressorState),
+          wiringRow("detector", packagePath),
+          wiringRow("runtime", runtimeParam),
+          wiringRow("ml param", detectorParam),
+          wiringRow("classify", classifierState),
+          wiringRow(
+            "classifier",
+            [
+              `car type ${args.car_classifier_type || "1"}: ${pathJoin(
+                classifierPath,
+                carClassifierModel
+              )}`,
+              `ped type ${args.pedestrian_classifier_type || "1"}: ${pathJoin(
+                classifierPath,
+                pedestrianClassifierModel
+              )}`,
+            ].join("\n")
+          ),
+          wiringRow("outputs", outputLines.join("\n")),
+        ].join("");
+      }
+
+      function renderModelComparison() {
+        const spec = state.modelComparison;
+        if (!spec) {
+          comparisonNoteEl.textContent = "No model comparison preset is configured.";
+          comparisonPreviewBoxEl.textContent = "Comparison preset is not configured.";
+          return;
+        }
+        comparisonRunIdEl.value = comparisonRunIdEl.value || defaultRunId();
+        comparisonCameraSelectEl.innerHTML = spec.cameras
+          .map(
+            (camera) =>
+              `<option value="${camera}" ${camera === "camera5" ? "selected" : ""}>${camera}</option>`
+          )
+          .join("");
+        comparisonCommonArgsEl.innerHTML = Object.entries(spec.args)
+          .map(([name, argSpec]) => renderInput("comparison_common", name, argSpec))
+          .join("");
+        comparisonVariantsJsonEl.value = JSON.stringify(spec.variants, null, 2);
+        comparisonNoteEl.textContent =
+          "Auto isolation rewrites namespace and output topics per variant.";
+        [
+          comparisonRunIdEl,
+          comparisonCameraSelectEl,
+          comparisonAutoIsolateEl,
+          comparisonCommonArgsEl,
+          comparisonVariantsJsonEl,
+        ].forEach((element) => {
+          element.addEventListener("input", () => previewComparison().catch(() => {}));
+          element.addEventListener("change", () => previewComparison().catch(() => {}));
+        });
+        previewComparison().catch((error) => setStatus(error.message, true));
+      }
+
+      function readComparisonPayload() {
+        let variants;
+        try {
+          variants = JSON.parse(comparisonVariantsJsonEl.value || "[]");
+        } catch (error) {
+          throw new Error(`Invalid variants JSON: ${error.message}`);
+        }
+        return {
+          run_id: comparisonRunIdEl.value.trim() || defaultRunId(),
+          camera_namespace: comparisonCameraSelectEl.value,
+          auto_isolate: comparisonAutoIsolateEl.checked,
+          common_args: readArgs(comparisonCommonArgsEl),
+          variants,
+        };
+      }
+
+      function readBagOptions() {
+        return {
+          bag_path: bagPathEl.value.trim(),
+          rate: Number(bagRateEl.value || 1),
+          loop: bagLoopEl.checked,
+          clock: bagClockEl.checked,
+          start_paused: bagStartPausedEl.checked,
+        };
+      }
+
+      function previewBagCommand() {
+        const options = readBagOptions();
+        const command = ["ros2", "bag", "play"];
+        if (options.bag_path) {
+          command.push(options.bag_path);
+        }
+        command.push("--disable-keyboard-controls");
+        command.push("--rate", String(options.rate || 1));
+        if (options.loop) {
+          command.push("--loop");
+        }
+        if (options.clock) {
+          command.push("--clock");
+        }
+        if (options.start_paused) {
+          command.push("--start-paused");
+        }
+        bagCommandBoxEl.textContent = options.bag_path ? command.join(" ") : "No bag selected.";
+      }
+
+      function renderBagBrowserEntries() {
+        bagBrowserListEl.innerHTML = state.bagBrowserEntries.length
+          ? state.bagBrowserEntries
+              .map((entry, index) => {
+                const actions = [];
+                if (entry.kind === "directory") {
+                  actions.push(`<button data-bag-open="${index}">Open</button>`);
+                }
+                if (entry.playable) {
+                  actions.push(`<button class="primary" data-bag-use="${index}">Use</button>`);
+                }
+                return `<div class="browser-entry ${entry.playable ? "playable" : ""}">
+                  <div>
+                    <strong>${escapeHtml(entry.name)}</strong>
+                    <div class="meta">${escapeHtml(entry.kind)}${
+                      entry.playable ? " playable" : ""
+                    }</div>
+                  </div>
+                  <div class="actions">${actions.join("")}</div>
+                </div>`;
+              })
+              .join("")
+          : `<div class="status-line">No entries.</div>`;
+
+        bagBrowserListEl.querySelectorAll("[data-bag-open]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const entry = state.bagBrowserEntries[Number(button.dataset.bagOpen)];
+            browseBagPath(entry.path).catch((error) => setStatus(error.message, true));
+          });
+        });
+        bagBrowserListEl.querySelectorAll("[data-bag-use]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const entry = state.bagBrowserEntries[Number(button.dataset.bagUse)];
+            bagPathEl.value = entry.path;
+            previewBagCommand();
+            bagBrowserEl.hidden = true;
+            setStatus(`Selected bag path: ${entry.path}`);
+          });
+        });
+      }
+
+      async function browseBagPath(path = null) {
+        const candidatePath = path || bagPathEl.value.trim();
+        const query = candidatePath ? `?path=${encodeURIComponent(candidatePath)}` : "";
+        const result = await request(`/api/bag/browse${query}`);
+        state.bagBrowserEntries = result.entries;
+        state.bagBrowserParent = result.parent;
+        bagBrowserPathEl.textContent = result.path;
+        bagBrowserUpBtn.disabled = !result.parent;
+        bagBrowserEl.hidden = false;
+        renderBagBrowserEntries();
+      }
+
+      function renderBagPlayer() {
+        const player = state.bagPlayer || {};
+        const running = Boolean(player.running);
+        const hasPlayer = Boolean(player.id);
+        const controls = player.controls || {};
+        const serviceNames = player.service_names || {};
+        const serviceCount = Object.keys(serviceNames).length;
+
+        bagStateEl.textContent = running ? "running" : hasPlayer ? `exit ${player.returncode}` : "idle";
+        if (!hasPlayer && serviceCount > 0) {
+          bagStateEl.textContent = "external";
+        }
+        bagStateEl.className = `pill ${
+          running || (!hasPlayer && serviceCount > 0) ? "running" : hasPlayer ? "exited" : ""
+        }`;
+        bagStopBtn.disabled = !running;
+        bagPauseBtn.disabled = !controls.pause;
+        bagResumeBtn.disabled = !controls.resume;
+        bagSetRateBtn.disabled = !controls.set_rate;
+        bagSlowerBtn.disabled = !controls.set_rate;
+        bagFasterBtn.disabled = !controls.set_rate;
+
+        if (player.command) {
+          bagCommandBoxEl.textContent = player.command.join(" ");
+        } else {
+          previewBagCommand();
+        }
+
+        if (!running && !hasPlayer && serviceCount === 0) {
+          bagNoteEl.textContent = "Start playback or run a rosbag player to enable service controls.";
+        } else if (!running && !hasPlayer) {
+          bagNoteEl.textContent = `${serviceCount} external rosbag control service(s) detected.`;
+        } else if (running && serviceCount === 0) {
+          bagNoteEl.textContent =
+            "Playback is running; pause/resume/rate controls are unavailable in this ROS graph.";
+        } else if (running) {
+          bagNoteEl.textContent = `${serviceCount} rosbag control service(s) detected.`;
+        } else {
+          bagNoteEl.textContent = "Playback has exited; check bag logs for details.";
+        }
+      }
+
+      async function previewLauncher() {
+        const launcher = selectedLauncher();
+        if (!launcher) {
+          return;
+        }
+        const payload = {
+          launcher_id: launcher.id,
+          args: readArgs(launcherFormEl),
+        };
+        const result = await request("/api/preview", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        previewBoxEl.textContent = result.command.join(" ");
+      }
+
+      async function startLauncher() {
+        const launcher = selectedLauncher();
+        if (!launcher) {
+          return;
+        }
+        const result = await request("/api/start", {
+          method: "POST",
+          body: JSON.stringify({
+            launcher_id: launcher.id,
+            args: readArgs(launcherFormEl),
+          }),
+        });
+        state.selectedProcessId = result.process.id;
+        setStatus(`Started ${result.process.label}; showing logs`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function startMultiYolox() {
+        const cameras = Array.from(cameraChecksEl.querySelectorAll("[data-camera]:checked")).map(
+          (item) => item.dataset.camera
+        );
+        const result = await request("/api/start_multi_yolox", {
+          method: "POST",
+          body: JSON.stringify({
+            cameras,
+            args: {
+              ...readArgs(multiBasicArgsEl),
+              ...readArgs(multiAddonArgsEl),
+            },
+          }),
+        });
+        if (result.processes.length > 0) {
+          state.selectedProcessId = result.processes[0].id;
+        }
+        setStatus(`Started ${cameras.length} camera launcher(s); showing first log`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function previewTlr() {
+        const spec = state.tlrValidation;
+        if (!spec) {
+          return;
+        }
+        const result = await request("/api/preview", {
+          method: "POST",
+          body: JSON.stringify({
+            launcher_id: spec.launcher_id,
+            args: readTlrArgs(),
+          }),
+        });
+        tlrPreviewBoxEl.textContent = result.command.join(" ");
+      }
+
+      async function startTlr() {
+        const spec = state.tlrValidation;
+        if (!spec) {
+          throw new Error("TLR validation is not configured");
+        }
+        const result = await request("/api/start", {
+          method: "POST",
+          body: JSON.stringify({
+            launcher_id: spec.launcher_id,
+            args: readTlrArgs(),
+          }),
+        });
+        state.selectedProcessId = result.process.id;
+        setStatus(`Started ${result.process.label}; showing logs`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function previewComparison() {
+        const spec = state.modelComparison;
+        if (!spec) {
+          return;
+        }
+        const result = await request("/api/preview_comparison", {
+          method: "POST",
+          body: JSON.stringify(readComparisonPayload()),
+        });
+        state.comparisonCommandsByVariant = new Map(
+          result.processes.map((process) => [process.variant_id, process.command.join(" ")])
+        );
+        comparisonPreviewBoxEl.innerHTML = result.processes
+          .map(
+            (process) => `<div class="process">
+              <div class="process-top">
+                <strong>${escapeHtml(process.variant_id)}</strong>
+                <button type="button" data-copy-variant="${escapeHtml(process.variant_id)}">
+                  Copy Command
+                </button>
+              </div>
+              <div class="codebox">${escapeHtml(process.command.join(" "))}</div>
+              <div class="meta">outputs=${escapeHtml(JSON.stringify(process.outputs))}</div>
+            </div>`
+          )
+          .join("");
+        comparisonPreviewBoxEl.querySelectorAll("[data-copy-variant]").forEach((button) => {
+          button.addEventListener("click", () =>
+            copyText(state.comparisonCommandsByVariant.get(button.dataset.copyVariant))
+          );
+        });
+      }
+
+      async function startComparison() {
+        const result = await request("/api/start_comparison", {
+          method: "POST",
+          body: JSON.stringify(readComparisonPayload()),
+        });
+        if (result.processes.length > 0) {
+          state.selectedProcessId = result.processes[0].id;
+        }
+        setStatus(`Started comparison ${result.run_id} with ${result.processes.length} variant(s)`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function stopProcess(id) {
+        await request("/api/stop", {
+          method: "POST",
+          body: JSON.stringify({ id }),
+        });
+        await refreshProcesses();
+      }
+
+      async function stopAll() {
+        await request("/api/stop_all", { method: "POST", body: JSON.stringify({}) });
+        await refreshProcesses();
+      }
+
+      async function closeProcess(id) {
+        await request("/api/close", {
+          method: "POST",
+          body: JSON.stringify({ id }),
+        });
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function closeAll() {
+        const result = await request("/api/close_all", { method: "POST", body: JSON.stringify({}) });
+        if (result.processes.length > 0) {
+          setStatus(`Closed ${result.processes.length} exited process(es)`);
+        } else {
+          setStatus("No exited processes to close");
+        }
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function stopGroup(groupId) {
+        const result = await request("/api/stop_group", {
+          method: "POST",
+          body: JSON.stringify({ group_id: groupId }),
+        });
+        setStatus(`Stopped ${result.processes.length} process(es) in ${groupId}`);
+        await refreshProcesses();
+      }
+
+      async function closeGroup(groupId) {
+        const result = await request("/api/close_group", {
+          method: "POST",
+          body: JSON.stringify({ group_id: groupId }),
+        });
+        setStatus(`Closed ${result.processes.length} exited process(es) in ${groupId}`);
+        await refreshProcesses();
+        await refreshLogs();
+      }
+
+      async function startBag() {
+        const options = readBagOptions();
+        if (!options.bag_path) {
+          throw new Error("Bag path is required");
+        }
+        const result = await request("/api/bag/start", {
+          method: "POST",
+          body: JSON.stringify(options),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Started bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function stopBag() {
+        const result = await request("/api/bag/stop", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Stopped bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function pauseBag() {
+        const result = await request("/api/bag/pause", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Paused bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function resumeBag() {
+        const result = await request("/api/bag/resume", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        state.bagPlayer = result.player;
+        setStatus("Resumed bag playback");
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function setBagRate(rate) {
+        bagRateEl.value = String(rate);
+        const result = await request("/api/bag/set_rate", {
+          method: "POST",
+          body: JSON.stringify({ rate }),
+        });
+        state.bagPlayer = result.player;
+        setStatus(`Set bag rate to ${rate}x`);
+        renderBagPlayer();
+        await refreshBagLogs();
+      }
+
+      async function refreshBagStatus() {
+        const result = await request("/api/bag/status");
+        state.bagPlayer = result.player;
+        renderBagPlayer();
+      }
+
+      async function refreshBagLogs() {
+        const result = await request("/api/bag/logs?lines=120");
+        bagLogBoxEl.textContent = result.text || "No bag log output yet.";
+      }
+
+      async function refreshProcesses() {
+        const result = await request("/api/processes");
+        const selectedExists = result.processes.some((process) => process.id === state.selectedProcessId);
+        if (!selectedExists) {
+          state.selectedProcessId = result.processes[0]?.id || null;
+        }
+
+        const failed = result.processes.find(
+          (process) =>
+            process.returncode !== null &&
+            process.returncode !== 0 &&
+            !state.reportedFailures.has(process.id)
+        );
+        if (failed) {
+          state.reportedFailures.add(failed.id);
+          state.selectedProcessId = failed.id;
+          setStatus(`${failed.label} exited with code ${failed.returncode}; showing logs`, true);
+        }
+
+        state.processCommandsById = new Map(
+          result.processes.map((process) => [process.id, process.command.join(" ")])
+        );
+        processListEl.innerHTML = result.processes.length
+          ? result.processes.map(renderProcess).join("")
+          : `<div class="status-line">No managed processes.</div>`;
+        processListEl.querySelectorAll("[data-stop]").forEach((button) => {
+          button.addEventListener("click", () => stopProcess(button.dataset.stop));
+        });
+        processListEl.querySelectorAll("[data-copy-command]").forEach((button) => {
+          button.addEventListener("click", () =>
+            copyText(state.processCommandsById.get(button.dataset.copyCommand))
+          );
+        });
+        processListEl.querySelectorAll("[data-close]").forEach((button) => {
+          button.addEventListener("click", () => closeProcess(button.dataset.close));
+        });
+        processListEl.querySelectorAll("[data-stop-group]").forEach((button) => {
+          button.addEventListener("click", () => stopGroup(button.dataset.stopGroup));
+        });
+        processListEl.querySelectorAll("[data-close-group]").forEach((button) => {
+          button.addEventListener("click", () => closeGroup(button.dataset.closeGroup));
+        });
+        processListEl.querySelectorAll("[data-log]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            state.selectedProcessId = button.dataset.log;
+            await refreshLogs();
+          });
+        });
+        if (failed) {
+          await refreshLogs();
+        }
+      }
+
+      function renderProcess(process) {
+        const stateClass = process.running ? "running" : "exited";
+        const stateText = process.running ? "running" : `exit ${process.returncode}`;
+        const groupMeta = process.group_id
+          ? `<div class="meta">group=${escapeHtml(process.group_id)} variant=${escapeHtml(
+              process.variant_id || ""
+            )}</div>`
+          : "";
+        const outputMeta =
+          process.outputs && Object.keys(process.outputs).length
+            ? `<div class="meta">${escapeHtml(JSON.stringify(process.outputs))}</div>`
+            : "";
+        const groupActions = process.group_id
+          ? `<button data-stop-group="${process.group_id}" class="danger">Stop Group</button>
+             <button data-close-group="${process.group_id}">Close Group</button>`
+          : "";
+        return `<div class="process ${process.id === state.selectedProcessId ? "selected" : ""}">
+          <div class="process-top">
+            <div>
+              <strong>${process.label}</strong>
+              <div class="meta">${process.id} pid=${process.pid} log=${process.log_path}</div>
+              ${groupMeta}
+            </div>
+            <span class="pill ${stateClass}">${stateText}</span>
+          </div>
+          ${outputMeta}
+          <div class="codebox">${process.command.join(" ")}</div>
+          <div class="actions">
+            <button data-log="${process.id}">Logs</button>
+            <button data-copy-command="${process.id}">Copy Command</button>
+            <button class="danger" data-stop="${process.id}" ${process.running ? "" : "disabled"}>
+              Stop
+            </button>
+            <button data-close="${process.id}" ${process.running ? "disabled" : ""}>Close</button>
+            ${groupActions}
+          </div>
+        </div>`;
+      }
+
+      async function refreshLogs() {
+        if (!state.selectedProcessId) {
+          logBoxEl.textContent = "No process selected.";
+          return;
+        }
+        const result = await request(`/api/logs?id=${state.selectedProcessId}&lines=200`);
+        logBoxEl.textContent = result.text || "No log output yet.";
+      }
+
+      async function init() {
+        try {
+          const registry = await request("/api/launchers");
+          state.launchers = registry.launchers;
+          state.multiYolox = registry.multi_yolox;
+          state.tlrValidation = registry.tlr_validation;
+          state.modelComparison = registry.model_comparison;
+          state.selectedLauncherId = state.launchers[0]?.id || null;
+          renderLaunchers();
+          renderLauncherForm();
+          renderMultiYolox();
+          renderTlrValidation();
+          renderModelComparison();
+          renderValidationTabs();
+          renderBagPlayer();
+          await refreshProcesses();
+          await refreshBagStatus();
+          await refreshBagLogs();
+          setStatus("Ready");
+        } catch (error) {
+          setStatus(error.message, true);
+        }
+      }
+
+      document.getElementById("previewBtn").addEventListener("click", () => {
+        previewLauncher().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startBtn").addEventListener("click", () => {
+        startLauncher().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("copyPreviewBtn").addEventListener("click", () => {
+        copyText(previewBoxEl.textContent.startsWith("ros2") ? previewBoxEl.textContent : "");
+      });
+      document.getElementById("startMultiBtn").addEventListener("click", () => {
+        startMultiYolox().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("previewTlrBtn").addEventListener("click", () => {
+        previewTlr().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startTlrBtn").addEventListener("click", () => {
+        startTlr().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("copyTlrPreviewBtn").addEventListener("click", () => {
+        copyText(
+          tlrPreviewBoxEl.textContent.startsWith("ros2") ? tlrPreviewBoxEl.textContent : ""
+        );
+      });
+      document.getElementById("previewComparisonBtn").addEventListener("click", () => {
+        previewComparison().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("startComparisonBtn").addEventListener("click", () => {
+        startComparison().catch((error) => setStatus(error.message, true));
+      });
+      yoloxTabBtn.addEventListener("click", () => {
+        switchValidationTab("yolox");
+      });
+      tlrTabBtn.addEventListener("click", () => {
+        switchValidationTab("tlr");
+      });
+      comparisonTabBtn.addEventListener("click", () => {
+        switchValidationTab("comparison");
+      });
+      document.getElementById("stopAllBtn").addEventListener("click", () => {
+        stopAll().catch((error) => setStatus(error.message, true));
+      });
+      document.getElementById("closeAllBtn").addEventListener("click", () => {
+        closeAll().catch((error) => setStatus(error.message, true));
+      });
+      bagPlayBtn.addEventListener("click", () => {
+        startBag().catch((error) => setStatus(error.message, true));
+      });
+      bagStopBtn.addEventListener("click", () => {
+        stopBag().catch((error) => setStatus(error.message, true));
+      });
+      bagPauseBtn.addEventListener("click", () => {
+        pauseBag().catch((error) => setStatus(error.message, true));
+      });
+      bagResumeBtn.addEventListener("click", () => {
+        resumeBag().catch((error) => setStatus(error.message, true));
+      });
+      bagSetRateBtn.addEventListener("click", () => {
+        setBagRate(Number(bagRateEl.value || 1)).catch((error) => setStatus(error.message, true));
+      });
+      bagBrowseBtn.addEventListener("click", () => {
+        browseBagPath().catch((error) => setStatus(error.message, true));
+      });
+      bagBrowserUpBtn.addEventListener("click", () => {
+        if (state.bagBrowserParent) {
+          browseBagPath(state.bagBrowserParent).catch((error) => setStatus(error.message, true));
+        }
+      });
+      bagBrowserCloseBtn.addEventListener("click", () => {
+        bagBrowserEl.hidden = true;
+      });
+      bagSlowerBtn.addEventListener("click", () => {
+        const nextRate = Math.max(0.1, Number(bagRateEl.value || 1) * 0.5);
+        setBagRate(Number(nextRate.toFixed(3))).catch((error) => setStatus(error.message, true));
+      });
+      bagFasterBtn.addEventListener("click", () => {
+        const nextRate = Number(bagRateEl.value || 1) * 2.0;
+        setBagRate(Number(nextRate.toFixed(3))).catch((error) => setStatus(error.message, true));
+      });
+      [bagPathEl, bagRateEl, bagLoopEl, bagClockEl, bagStartPausedEl].forEach((element) => {
+        element.addEventListener("input", previewBagCommand);
+        element.addEventListener("change", previewBagCommand);
+      });
+
+      window.setInterval(() => {
+        refreshProcesses().catch(() => {});
+        refreshLogs().catch(() => {});
+        refreshBagStatus().catch(() => {});
+        refreshBagLogs().catch(() => {});
+      }, 2000);
+
+      init();
+    </script>
+  </body>
+</html>

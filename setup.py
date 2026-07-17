@@ -28,7 +28,10 @@ setup(
         (f"lib/{package_name}", ["scripts/check_environment"]),
     ],
     package_data={
-        package_name: ["param_snapshot/static/*.html"],
+        package_name: [
+            "launcher_dashboard/static/*.html",
+            "param_snapshot/static/*.html",
+        ],
     },
     install_requires=["setuptools"],
     zip_safe=True,
@@ -43,6 +46,7 @@ setup(
             "open_detector_node = autoware_ml_model_launchers.open_detector.ros_node:main",
             "open_detector_image = autoware_ml_model_launchers.open_detector.cli_detect_image:main",
             "open_detector_smoke = autoware_ml_model_launchers.open_detector.smoke_backends:main",
+            "launcher_dashboard_ui = autoware_ml_model_launchers.launcher_dashboard.ui_server:main",
             "param_snapshot_compare = autoware_ml_model_launchers.param_snapshot.compare:main",
             "param_snapshot_ui = autoware_ml_model_launchers.param_snapshot.ui_server:main",
             "reusable_bbox_tracker_node = autoware_ml_model_launchers.open_tracker.reusable_bbox_tracker_node:main",

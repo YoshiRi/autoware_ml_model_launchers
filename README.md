@@ -93,10 +93,13 @@ The default model tree must contain:
 |   `-- semseg_color_map.csv
 |-- traffic_light_detector/
 |   |-- yolox_s_car_ped_tl_detector_960_960_batch_1.onnx
-|   `-- car_ped_tl_detector_labels.txt
+|   |-- car_ped_tl_detector_labels.txt
+|   |-- traffic_light_roi_label_remap.csv
+|   `-- ml_package_yolox.param.yaml
 `-- traffic_light_classifier/
     |-- traffic_light_classifier_mobilenetv2_batch_6.onnx
     |-- ped_traffic_light_classifier_mobilenetv2_batch_6.onnx
+    |-- traffic_light_lamp_recognizer_comlops.onnx
     |-- lamp_labels.txt
     |-- lamp_labels_ped.txt
     `-- lamp_recognizer_ml.param.yaml
@@ -170,6 +173,22 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
 
 `node_namespace` defaults to `perception/<camera_namespace>`. `camera_namespace` controls the
 `/sensing/camera/<camera_namespace>` input path and per-camera output topic names.
+The TLR detector loads TensorRT YOLOX runtime parameters from
+`config/tlr_tensorrt_yolox.param.yaml` and model artifact paths from
+`traffic_light_detector/ml_package_yolox.param.yaml`.
+The classifier model can be selected with `car_classifier_model_name`,
+`pedestrian_classifier_model_name`, and `*_classifier_type`. For example,
+LampRecognizer for the car classifier uses:
+
+```bash
+ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
+  camera_namespace:=camera5 \
+  car_classifier_type:=2 \
+  car_classifier_model_name:=traffic_light_lamp_recognizer_comlops.onnx
+```
+
+These values are launcher arguments today; in a fuller model catalog flow they should come from
+model package metadata such as `ml_packages.param.yaml`.
 
 ## Open detector comparison
 

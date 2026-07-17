@@ -16,8 +16,8 @@ class TimingStats:
     runs: int
     mean: float | None
     median: float | None
-    min: float | None
-    max: float | None
+    min_ms: float | None
+    max_ms: float | None
 
     @classmethod
     def from_values(cls, values_ms: Sequence[float]) -> "TimingStats":
@@ -26,8 +26,8 @@ class TimingStats:
             runs=len(values),
             mean=statistics.mean(values) if values else None,
             median=statistics.median(values) if values else None,
-            min=min(values) if values else None,
-            max=max(values) if values else None,
+            min_ms=min(values) if values else None,
+            max_ms=max(values) if values else None,
         )
 
     def to_dict(self) -> dict:
@@ -35,8 +35,8 @@ class TimingStats:
             "runs": self.runs,
             "mean": self.mean,
             "median": self.median,
-            "min": self.min,
-            "max": self.max,
+            "min": self.min_ms,
+            "max": self.max_ms,
         }
 
 
