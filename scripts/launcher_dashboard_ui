@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""ROS executable wrapper for the launcher dashboard UI server."""
+
+from autoware_ml_model_launchers.launcher_dashboard.ui_server import main
+
+
+if __name__ == "__main__":
+    main()

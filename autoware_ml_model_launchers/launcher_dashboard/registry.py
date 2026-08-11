@@ -71,6 +71,7 @@ class LauncherSpec:
     file: str
     args: dict[str, ArgSpec]
     isolation: "IsolationSpec | None" = None
+    record: "RecordSpec | None" = None
 
     @classmethod
     def from_mapping(cls, launcher_id: str, data: dict[str, Any]) -> "LauncherSpec":
@@ -88,6 +89,7 @@ class LauncherSpec:
             file=str(data["file"]),
             args=args,
             isolation=IsolationSpec.from_mapping(data.get("isolation", {})),
+            record=RecordSpec.from_mapping(data.get("record", {})),
         )
 
     def defaults(self) -> dict[str, Any]:
@@ -101,6 +103,59 @@ class LauncherSpec:
             "file": self.file,
             "args": {name: spec.to_json() for name, spec in self.args.items()},
             "isolation": self.isolation.to_json() if self.isolation else None,
+            "record": self.record.to_json() if self.record else None,
+        }
+
+
+@dataclass(frozen=True)
+class RecordSpec:
+    """Declares which launch args carry topics worth recording, and to which sink."""
+
+    video_args: tuple[str, ...]
+    bag_args: tuple[str, ...]
+    topic_templates: dict[str, str]
+
+    @classmethod
+    def from_mapping(cls, data: Any) -> "RecordSpec | None":
+        if not isinstance(data, dict):
+            return None
+        video_args = _string_sequence(data.get("video_args", ()), "record video_args")
+        bag_args = _string_sequence(data.get("bag_args", ()), "record bag_args")
+        overlap = sorted(set(video_args) & set(bag_args))
+        if overlap:
+            raise RegistryError(f"record args listed twice: {', '.join(overlap)}")
+        if not video_args and not bag_args:
+            return None
+        return cls(
+            video_args=video_args,
+            bag_args=bag_args,
+            topic_templates=_string_mapping(
+                data.get("topic_templates", {}), "record topic_templates"
+            ),
+        )
+
+    def sink_for(self, arg_name: str) -> str | None:
+        if arg_name in self.video_args:
+            return "video"
+        if arg_name in self.bag_args:
+            return "bag"
+        return None
+
+    def arg_names(self) -> tuple[str, ...]:
+        return self.video_args + self.bag_args
+
+    def default_topic(self, arg_name: str, context: dict[str, str]) -> str | None:
+        """Topic the launch file would use when the arg is left at its default."""
+        template = self.topic_templates.get(arg_name)
+        if template is None:
+            return None
+        return _format_template(template, context)
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "video_args": list(self.video_args),
+            "bag_args": list(self.bag_args),
+            "topic_templates": dict(self.topic_templates),
         }
 
 
@@ -248,6 +303,7 @@ class LauncherRegistry:
     multi_yolox: CameraLauncherPresetSpec | None = None
     tlr_validation: CameraLauncherPresetSpec | None = None
     model_comparison: ModelComparisonSpec | None = None
+    recording: dict[str, Any] | None = None
 
     def get(self, launcher_id: str) -> LauncherSpec:
         try:
@@ -263,6 +319,7 @@ class LauncherRegistry:
             "model_comparison": (
                 self.model_comparison.to_json() if self.model_comparison else None
             ),
+            "recording": dict(self.recording or {}),
         }
 
 
@@ -313,11 +370,13 @@ def load_registry(path: Path) -> LauncherRegistry:
         if isinstance(comparison_data, dict)
         else None
     )
+    recording_data = data.get("recording")
     return LauncherRegistry(
         launchers=launchers,
         multi_yolox=multi_yolox,
         tlr_validation=tlr_validation,
         model_comparison=model_comparison,
+        recording=dict(recording_data) if isinstance(recording_data, dict) else None,
     )
 
 
@@ -349,6 +408,12 @@ def _string_mapping(data: Any, name: str) -> dict[str, str]:
     if not isinstance(data, dict):
         raise RegistryError(f"{name} must be a mapping")
     return {str(key): str(value) for key, value in data.items()}
+
+
+def _string_sequence(data: Any, name: str) -> tuple[str, ...]:
+    if isinstance(data, str) or not isinstance(data, (list, tuple)):
+        raise RegistryError(f"{name} must be a list")
+    return tuple(str(item) for item in data)
 
 
 def _format_template(template: str, context: dict[str, str]) -> str:

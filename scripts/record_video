@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""ROS executable wrapper for the image topic video recorder node."""
+
+from autoware_ml_model_launchers.recording.video_recorder import main
+
+
+if __name__ == "__main__":
+    main()
