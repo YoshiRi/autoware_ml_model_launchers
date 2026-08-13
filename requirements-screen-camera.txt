@@ -1,0 +1,4 @@
+# Optional: faster screen capture for screen_camera.launch.xml.
+# Without it the node falls back to ffmpeg x11grab, which needs no Python
+# package but starts a subprocess per capture session.
+mss>=9.0.1

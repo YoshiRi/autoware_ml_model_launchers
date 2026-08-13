@@ -137,6 +137,46 @@ Default outputs:
 - TLR signals: `/perception/traffic_light_recognition/camera5/classification/traffic_signals`
 - TLR debug image: `/perception/traffic_light_recognition/camera5/detection/yolox/debug/image`
 
+## Screen as a pseudo camera
+
+`screen_camera.launch.xml` publishes a desktop screen region as
+`sensor_msgs/CompressedImage` on the topic a real camera would use, so a model can be pointed at
+anything that can be displayed: a video file, a web player, or a Lichtblick panel.
+
+```bash
+# terminal 1: publish the first monitor at 10 fps
+ros2 launch autoware_ml_model_launchers screen_camera.launch.xml \
+  camera_namespace:=screen monitor:=1 fps:=10
+
+# terminal 2: run traffic light recognition on it
+ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
+  camera_namespace:=screen use_decompress:=true use_sim_time:=false
+```
+
+The node publishes `/sensing/camera/<camera_namespace>/image_raw/compressed`, which is the topic
+the launchers already decompress when `use_decompress:=true`.
+
+> [!IMPORTANT]
+> Pass `use_sim_time:=false` to the ML launcher. A screen is a live source with no `/clock`, while
+> the other launch files default to `true` for rosbag playback.
+
+Useful arguments:
+
+- `monitor:=1`: 1-based monitor index; `0` captures every monitor as one image
+- `region:=1920x1080+2560+0`: capture an explicit rectangle instead of a whole monitor
+- `resize_width:=960`: scale before JPEG encoding; the height follows the aspect ratio
+- `jpeg_quality:=80`, `fps:=10`, `show_cursor:=false`
+- `backend:=auto`: uses `mss` when installed, otherwise ffmpeg `x11grab`
+
+Capture works on X11 sessions. `mss` is optional and only makes higher frame rates cheaper:
+
+```bash
+pip install -r requirements-screen-camera.txt
+```
+
+See [docs/screen_camera_design.md](docs/screen_camera_design.md) for the backend and region
+details.
+
 ## Visualization with Lichtblick
 
 Visualization currently assumes **Lichtblick**. Connect Lichtblick to the ROS graph and add image
