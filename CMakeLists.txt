@@ -19,6 +19,7 @@ install(
     scripts/open_detector_node
     scripts/open_detector_smoke
     scripts/reusable_bbox_tracker_node
+    scripts/screen_camera_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -58,6 +59,7 @@ install(
     requirements-open-detector-rfdetr.txt
     requirements-open-tracker-bbox.txt
     requirements-open-yolo.txt
+    requirements-screen-camera.txt
   DESTINATION share/${PROJECT_NAME}
 )
 
