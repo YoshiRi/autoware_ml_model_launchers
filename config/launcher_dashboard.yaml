@@ -377,13 +377,15 @@ launchers:
         type: string
         default: ""
         group: advanced
+      # Left unset so the launch file keeps deriving them from camera_namespace;
+      # an empty string here would be sent as frame_id:= and override it.
       frame_id:
         type: string
-        default: ""
+        default:
         group: advanced
       output/image:
         type: string
-        default: ""
+        default:
         group: advanced
 
   streampetr_x2:

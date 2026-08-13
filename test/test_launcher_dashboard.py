@@ -19,6 +19,37 @@ from autoware_ml_model_launchers.launcher_dashboard.registry import (
 )
 
 
+def test_registry_never_blanks_out_a_derived_launch_default():
+    """An empty string default is sent as `arg:=`, wiping the launch default.
+
+    The dashboard only omits an argument when its registry default is null, so a
+    string arg whose launch file default is derived (for example from
+    camera_namespace) must be declared with `default:` and not `default: ""`.
+    """
+    import xml.etree.ElementTree as ET
+
+    registry_path = default_registry_path()
+    launch_dir = registry_path.parents[1] / "launch"
+    registry = load_registry(registry_path)
+
+    offenders = []
+    for spec in registry.launchers.values():
+        launch_path = launch_dir / spec.file
+        if not launch_path.is_file():
+            continue
+        launch_defaults = {
+            element.get("name"): element.get("default") or ""
+            for element in ET.parse(launch_path).getroot().findall("arg")
+        }
+        for name, arg in spec.args.items():
+            if arg.value_type != "string" or arg.default != "":
+                continue
+            if launch_defaults.get(name, "") != "":
+                offenders.append(f"{spec.launcher_id}.{name}")
+
+    assert not offenders, f"use `default:` instead of `default: \"\"` for {offenders}"
+
+
 def test_default_registry_builds_yolox_command():
     registry = load_registry(default_registry_path())
     command = build_launch_command(
