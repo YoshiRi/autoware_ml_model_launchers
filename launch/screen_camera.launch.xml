@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="camera_namespace" default="screen" description="Camera namespace under /sensing/camera"/>
+  <arg name="output/image" default="/sensing/camera/$(var camera_namespace)/image_raw" description="Raw image topic name; the node publishes its /compressed variant"/>
+  <!-- Screen capture is a live source, so it publishes on the wall clock. -->
+  <arg name="use_sim_time" default="false" description="use simulation clock"/>
+
+  <arg name="fps" default="10.0" description="published frames per second"/>
+  <arg name="region" default="" description="capture region as WxH+X+Y; empty uses the monitor argument"/>
+  <arg name="monitor" default="1" description="1-based monitor index; 0 captures every monitor"/>
+  <arg name="display" default="" description="X display, e.g. :0; empty uses DISPLAY"/>
+  <arg name="backend" default="auto" description="auto, mss, or ffmpeg"/>
+  <arg name="jpeg_quality" default="80" description="JPEG quality of the published image"/>
+  <arg name="resize_width" default="0" description="output width; 0 keeps the captured size"/>
+  <arg name="resize_height" default="0" description="output height; 0 keeps the aspect ratio"/>
+  <arg name="show_cursor" default="false" description="draw the mouse cursor into the image"/>
+  <arg name="frame_id" default="$(var camera_namespace)" description="frame_id of the published image"/>
+
+  <node
+    pkg="autoware_ml_model_launchers"
+    exec="screen_camera_node"
+    name="screen_camera"
+    output="screen"
+  >
+    <param name="output_topic" value="$(var output/image)/compressed"/>
+    <param name="frame_id" value="$(var frame_id)"/>
+    <param name="fps" value="$(var fps)"/>
+    <param name="region" value="$(var region)"/>
+    <param name="monitor" value="$(var monitor)"/>
+    <param name="display" value="$(var display)"/>
+    <param name="backend" value="$(var backend)"/>
+    <param name="jpeg_quality" value="$(var jpeg_quality)"/>
+    <param name="resize_width" value="$(var resize_width)"/>
+    <param name="resize_height" value="$(var resize_height)"/>
+    <param name="show_cursor" value="$(var show_cursor)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+</launch>

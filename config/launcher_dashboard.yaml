@@ -394,6 +394,61 @@ launchers:
         output/debug_compressed: /perception/object_recognition/detection/open_yolo/{camera_namespace}/debug/image/compressed
         output/predict_ms: /perception/object_recognition/detection/open_yolo/{camera_namespace}/latency/predict_ms
 
+  screen_camera:
+    label: Screen Camera (pseudo input)
+    package: autoware_ml_model_launchers
+    file: screen_camera.launch.xml
+    args:
+      camera_namespace:
+        type: string
+        default: screen
+      monitor:
+        type: int
+        default: 1
+      region:
+        type: string
+        default: ""
+        suggestions:
+          - 1920x1080+0+0
+      fps:
+        type: float
+        default: 10.0
+      jpeg_quality:
+        type: int
+        default: 80
+      resize_width:
+        type: int
+        default: 0
+      resize_height:
+        type: int
+        default: 0
+      show_cursor:
+        type: bool
+        default: false
+      backend:
+        type: string
+        default: auto
+        choices:
+          - auto
+          - mss
+          - ffmpeg
+      # A screen is a live source, so it must not wait for /clock.
+      use_sim_time:
+        type: bool
+        default: false
+      display:
+        type: string
+        default: ""
+        group: advanced
+      frame_id:
+        type: string
+        default: ""
+        group: advanced
+      output/image:
+        type: string
+        default: ""
+        group: advanced
+
   streampetr_x2:
     label: StreamPETR X2
     package: autoware_ml_model_launchers

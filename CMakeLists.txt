@@ -24,6 +24,7 @@ install(
     scripts/record_video
     scripts/launcher_dashboard_ui
     scripts/param_snapshot_ui
+    scripts/screen_camera_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -63,6 +64,7 @@ install(
     requirements-open-detector-rfdetr.txt
     requirements-open-tracker-bbox.txt
     requirements-open-yolo.txt
+    requirements-screen-camera.txt
   DESTINATION share/${PROJECT_NAME}
 )
 
