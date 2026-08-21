@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""ROS executable wrapper for the unattended recording session runner."""
+
+from autoware_ml_model_launchers.recording.cli import record_session_main
+
+
+if __name__ == "__main__":
+    record_session_main()

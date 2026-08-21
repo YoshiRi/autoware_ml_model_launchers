@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""ROS executable wrapper for the parameter snapshot UI server."""
+
+from autoware_ml_model_launchers.param_snapshot.ui_server import main
+
+
+if __name__ == "__main__":
+    main()

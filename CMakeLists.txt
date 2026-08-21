@@ -19,6 +19,11 @@ install(
     scripts/open_detector_node
     scripts/open_detector_smoke
     scripts/reusable_bbox_tracker_node
+    scripts/record_topics
+    scripts/record_session
+    scripts/record_video
+    scripts/launcher_dashboard_ui
+    scripts/param_snapshot_ui
     scripts/screen_camera_node
   DESTINATION lib/${PROJECT_NAME}
 )
