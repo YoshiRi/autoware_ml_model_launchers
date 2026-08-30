@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter
 from typing import Any
 
 import yaml
@@ -71,6 +72,7 @@ class LauncherSpec:
     file: str
     args: dict[str, ArgSpec]
     isolation: "IsolationSpec | None" = None
+    model_path_template: tuple[str, ...] = ()
     record: "RecordSpec | None" = None
 
     @classmethod
@@ -89,11 +91,39 @@ class LauncherSpec:
             file=str(data["file"]),
             args=args,
             isolation=IsolationSpec.from_mapping(data.get("isolation", {})),
+            model_path_template=_model_path_templates(
+                data.get("model_path_template"),
+                args,
+                launcher_id,
+            ),
             record=RecordSpec.from_mapping(data.get("record", {})),
         )
 
     def defaults(self) -> dict[str, Any]:
         return {name: spec.default for name, spec in self.args.items()}
+
+    def resolve_model_path(self, args: dict[str, Any] | None = None) -> str | None:
+        """
+        Return the model file this launcher loads for ``args``.
+
+        The launch files derive model paths from several args, so the registry
+        cannot know the model from any single arg. Each candidate template is
+        tried in order and the first one whose referenced args all carry a
+        value wins, which lets a launcher declare an explicit override arg
+        first and the derived default afterwards. Returns ``None`` when the
+        launcher declares no template or no candidate is fully populated.
+        """
+        if not self.model_path_template:
+            return None
+        values = self.defaults()
+        values.update(args or {})
+        context = {
+            name: "" if value is None else str(value) for name, value in values.items()
+        }
+        for template in self.model_path_template:
+            if all(context.get(field) for field in _template_fields(template)):
+                return _format_template(template, context)
+        return None
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -103,6 +133,8 @@ class LauncherSpec:
             "file": self.file,
             "args": {name: spec.to_json() for name, spec in self.args.items()},
             "isolation": self.isolation.to_json() if self.isolation else None,
+            "model_path_template": list(self.model_path_template),
+            "model_path": self.resolve_model_path(),
             "record": self.record.to_json() if self.record else None,
         }
 
@@ -408,6 +440,34 @@ def _string_mapping(data: Any, name: str) -> dict[str, str]:
     if not isinstance(data, dict):
         raise RegistryError(f"{name} must be a mapping")
     return {str(key): str(value) for key, value in data.items()}
+
+
+def _template_fields(template: str) -> list[str]:
+    return [field for _, field, _, _ in Formatter().parse(template) if field]
+
+
+def _model_path_templates(
+    data: Any,
+    args: dict[str, ArgSpec],
+    launcher_id: str,
+) -> tuple[str, ...]:
+    if data is None:
+        return ()
+    if isinstance(data, str):
+        templates = (data,)
+    elif isinstance(data, list) and all(isinstance(item, str) for item in data):
+        templates = tuple(data)
+    else:
+        raise RegistryError(
+            f"launcher {launcher_id} model_path_template must be a string or a list of strings"
+        )
+    for template in templates:
+        for field in _template_fields(template):
+            if field not in args:
+                raise RegistryError(
+                    f"launcher {launcher_id} model_path_template references unknown arg: {field}"
+                )
+    return templates
 
 
 def _string_sequence(data: Any, name: str) -> tuple[str, ...]:

@@ -1,4 +1,5 @@
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 import pytest
 from launch import LaunchContext, LaunchDescription, LaunchService
@@ -82,3 +83,25 @@ def test_yolox_python_tracker_launcher_parses():
     )
     source = AnyLaunchDescriptionSource(str(launch_path))
     assert source.get_launch_description(LaunchContext()) is not None
+
+
+def test_yolox_camera_sets_sim_time_for_included_nodes():
+    launch_path = Path(__file__).parents[1] / "launch" / "yolox_camera.launch.xml"
+    root = ET.parse(launch_path).getroot()
+    include_groups = [
+        group
+        for group in root.findall("group")
+        if group.find("include") is not None
+    ]
+
+    assert len(include_groups) == 2
+    for group in include_groups:
+        set_parameter = group.find("set_parameter")
+        assert set_parameter is not None
+        assert set_parameter.attrib["name"] == "use_sim_time"
+        assert set_parameter.attrib["value"] == "$(var use_sim_time)"
+        assert all(
+            arg.attrib["name"] != "use_sim_time"
+            for include in group.findall("include")
+            for arg in include.findall("arg")
+        )

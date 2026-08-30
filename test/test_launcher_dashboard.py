@@ -12,11 +12,43 @@ from autoware_ml_model_launchers.launcher_dashboard.bag_player import (
 )
 from autoware_ml_model_launchers.launcher_dashboard.process_manager import ProcessManager
 from autoware_ml_model_launchers.launcher_dashboard.registry import (
+    LauncherSpec,
     RegistryError,
     build_launch_command,
     default_registry_path,
     load_registry,
 )
+
+
+def test_registry_never_blanks_out_a_derived_launch_default():
+    """An empty string default is sent as `arg:=`, wiping the launch default.
+
+    The dashboard only omits an argument when its registry default is null, so a
+    string arg whose launch file default is derived (for example from
+    camera_namespace) must be declared with `default:` and not `default: ""`.
+    """
+    import xml.etree.ElementTree as ET
+
+    registry_path = default_registry_path()
+    launch_dir = registry_path.parents[1] / "launch"
+    registry = load_registry(registry_path)
+
+    offenders = []
+    for spec in registry.launchers.values():
+        launch_path = launch_dir / spec.file
+        if not launch_path.is_file():
+            continue
+        launch_defaults = {
+            element.get("name"): element.get("default") or ""
+            for element in ET.parse(launch_path).getroot().findall("arg")
+        }
+        for name, arg in spec.args.items():
+            if arg.value_type != "string" or arg.default != "":
+                continue
+            if launch_defaults.get(name, "") != "":
+                offenders.append(f"{spec.launcher_id}.{name}")
+
+    assert not offenders, f"use `default:` instead of `default: \"\"` for {offenders}"
 
 
 def test_default_registry_builds_yolox_command():
@@ -140,6 +172,75 @@ def test_registry_rejects_unknown_launcher_arg():
         build_launch_command(registry.get("yolox_camera"), {"not_an_arg": "value"})
 
 
+def test_registry_resolves_the_model_path_each_launcher_will_load():
+    registry = load_registry(default_registry_path())
+    yolox = registry.get("yolox_camera")
+    tlr = registry.get("tlr_detect_and_classifier")
+
+    assert yolox.resolve_model_path() == (
+        "/opt/autoware/mlmodels/yolox/yolox-sPlus-T4-960x960-debris.onnx"
+    )
+    assert yolox.resolve_model_path({"model_name": "model_a.onnx"}) == (
+        "/opt/autoware/mlmodels/yolox/model_a.onnx"
+    )
+    # detector_param_path is unset by default, so the derived candidate wins.
+    assert tlr.resolve_model_path() == (
+        "/opt/autoware/mlmodels/traffic_light_detector/ml_package_yolox.param.yaml"
+    )
+    assert tlr.resolve_model_path({"data_path": "/data/TLRtest"}) == (
+        "/data/TLRtest/traffic_light_detector/ml_package_yolox.param.yaml"
+    )
+    assert tlr.resolve_model_path({"detector_param_path": "/data/custom.param.yaml"}) == (
+        "/data/custom.param.yaml"
+    )
+    # A launcher without a template reports no model instead of guessing one.
+    assert registry.get("screen_camera").resolve_model_path() is None
+
+
+def test_launcher_json_publishes_the_model_path_contract():
+    """Other repos read the registry to learn which model a launcher loads."""
+    registry = load_registry(default_registry_path())
+    payload = {spec["id"]: spec for spec in registry.to_json()["launchers"]}
+
+    assert payload["yolox_camera"]["model_path_template"] == [
+        "{data_path}/yolox/{model_name}"
+    ]
+    assert payload["yolox_camera"]["model_path"] == (
+        "/opt/autoware/mlmodels/yolox/yolox-sPlus-T4-960x960-debris.onnx"
+    )
+    assert payload["tlr_detect_and_classifier"]["model_path_template"][0] == (
+        "{detector_param_path}"
+    )
+    assert payload["screen_camera"]["model_path_template"] == []
+    assert payload["screen_camera"]["model_path"] is None
+
+
+def test_registry_rejects_a_model_path_template_naming_an_undeclared_arg():
+    with pytest.raises(RegistryError, match="unknown arg: model_name"):
+        LauncherSpec.from_mapping(
+            "broken",
+            {
+                "package": "autoware_ml_model_launchers",
+                "file": "broken.launch.xml",
+                "model_path_template": "{data_path}/{model_name}",
+                "args": {"data_path": {"type": "string", "default": "/opt"}},
+            },
+        )
+
+
+def test_registry_rejects_a_non_string_model_path_template():
+    with pytest.raises(RegistryError, match="must be a string or a list of strings"):
+        LauncherSpec.from_mapping(
+            "broken",
+            {
+                "package": "autoware_ml_model_launchers",
+                "file": "broken.launch.xml",
+                "model_path_template": {"path": "{data_path}"},
+                "args": {"data_path": {"type": "string", "default": "/opt"}},
+            },
+        )
+
+
 def test_open_yolo_registry_uses_launch_defaults_for_wiring():
     registry = load_registry(default_registry_path())
     command = build_launch_command(
@@ -189,6 +290,9 @@ def test_process_manager_start_uses_command_list(monkeypatch, tmp_path):
     assert captured["kwargs"]["start_new_session"] is True
     assert "camera_namespace:=camera7" in captured["command"]
     assert "enable_bytetrack_visualizer:=false" in captured["command"]
+    assert process["model_path"] == (
+        "/opt/autoware/mlmodels/yolox/yolox-sPlus-T4-960x960-debris.onnx"
+    )
     assert manager.tail_log(process["id"]).startswith("$ ros2 launch ")
 
 
@@ -273,6 +377,7 @@ def test_process_manager_previews_isolated_comparison():
     assert preview["run_id"] == "eval_run"
     assert preview["group_id"] == "comparison:eval_run"
     assert process["variant_id"] == "yolox_base"
+    assert process["model_path"] == "/opt/autoware/mlmodels/yolox/model_a.onnx"
     assert "model_name:=model_a.onnx" in process["command"]
     assert "camera_namespace:=camera4" in process["command"]
     assert "node_namespace:=evaluation/eval_run/yolox_base/camera4" in process["command"]
