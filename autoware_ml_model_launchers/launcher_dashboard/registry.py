@@ -103,7 +103,8 @@ class LauncherSpec:
         return {name: spec.default for name, spec in self.args.items()}
 
     def resolve_model_path(self, args: dict[str, Any] | None = None) -> str | None:
-        """Return the model file this launcher loads for ``args``.
+        """
+        Return the model file this launcher loads for ``args``.
 
         The launch files derive model paths from several args, so the registry
         cannot know the model from any single arg. Each candidate template is
