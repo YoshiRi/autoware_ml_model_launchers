@@ -33,6 +33,7 @@ class ManagedProcess:
     run_id: str | None = None
     variant_id: str | None = None
     outputs: dict[str, str] | None = None
+    model_path: str | None = None
 
     def refresh(self) -> None:
         self.process.poll()
@@ -53,6 +54,7 @@ class ManagedProcess:
             "run_id": self.run_id,
             "variant_id": self.variant_id,
             "outputs": dict(self.outputs or {}),
+            "model_path": self.model_path,
         }
 
 
@@ -100,6 +102,7 @@ class ProcessManager:
             run_id=metadata.get("run_id"),
             variant_id=metadata.get("variant_id"),
             outputs=metadata.get("outputs"),
+            model_path=spec.resolve_model_path(args),
         )
         with self._lock:
             self._processes[process_id] = managed
@@ -138,6 +141,7 @@ class ProcessManager:
                     "args": item["args"],
                     "outputs": item["outputs"],
                     "command": build_launch_command(spec, item["args"]),
+                    "model_path": spec.resolve_model_path(item["args"]),
                 }
             )
         return {

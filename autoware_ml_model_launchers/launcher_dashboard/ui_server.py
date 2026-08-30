@@ -85,8 +85,9 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
 
     def _handle_preview(self, payload: dict[str, Any]) -> None:
         spec = self.manager.registry.get(str(payload["launcher_id"]))
-        command = build_launch_command(spec, payload.get("args", {}))
-        self._send_json({"command": command})
+        args = payload.get("args", {})
+        command = build_launch_command(spec, args)
+        self._send_json({"command": command, "model_path": spec.resolve_model_path(args)})
 
     def _handle_preview_comparison(self, payload: dict[str, Any]) -> None:
         self._send_json(self.manager.preview_comparison(payload))

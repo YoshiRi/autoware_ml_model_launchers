@@ -3,6 +3,9 @@ launchers:
     label: YOLOX Camera
     package: autoware_ml_model_launchers
     file: yolox_camera.launch.xml
+    # The launch file derives model_path from data_path/yolox/model_name, so the
+    # dashboard and other repos resolve the same model through this template.
+    model_path_template: "{data_path}/yolox/{model_name}"
     args:
       camera_namespace:
         type: string
@@ -138,6 +141,11 @@ launchers:
     label: TLR Detection/Classification
     package: autoware_ml_model_launchers
     file: tlr_detect_and_classifier.launch.xml
+    # detector_param_path wins when a variant overrides it; otherwise the launch
+    # file default (ml package dir + ml_package_yolox.param.yaml) is reproduced.
+    model_path_template:
+      - "{detector_param_path}"
+      - "{data_path}/{detector_ml_package_name}/ml_package_yolox.param.yaml"
     args:
       camera_namespace:
         type: string
@@ -288,6 +296,8 @@ launchers:
     label: Open YOLO
     package: autoware_ml_model_launchers
     file: open_yolo.launch.xml
+    # Ultralytics resolves bare weight names itself, so the arg is the model id.
+    model_path_template: "{model}"
     args:
       camera_namespace:
         type: string

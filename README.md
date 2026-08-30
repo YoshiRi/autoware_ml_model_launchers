@@ -230,6 +230,42 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
 These values are launcher arguments today; in a fuller model catalog flow they should come from
 model package metadata such as `ml_packages.param.yaml`.
 
+### Which model a launcher loads
+
+The launch files build model paths out of several arguments, so no single argument tells you
+what will actually be loaded. `config/launcher_dashboard.yaml` declares that composition per
+launcher as `model_path_template`:
+
+```yaml
+launchers:
+  yolox_camera:
+    model_path_template: "{data_path}/yolox/{model_name}"
+  tlr_detect_and_classifier:
+    model_path_template:
+      - "{detector_param_path}"
+      - "{data_path}/{detector_ml_package_name}/ml_package_yolox.param.yaml"
+```
+
+Candidates are tried in order and the first one whose arguments all carry a value wins, so an
+explicit override (`detector_param_path`) takes precedence over the derived launch-file default.
+Repositories that launch these files can resolve or select a model without reimplementing that
+arithmetic:
+
+```python
+from autoware_ml_model_launchers.launcher_dashboard.registry import (
+    default_registry_path,
+    load_registry,
+)
+
+spec = load_registry(default_registry_path()).get("yolox_camera")
+spec.resolve_model_path()                              # the default model file
+spec.resolve_model_path({"model_name": "model_a.onnx"})  # the model for these args
+```
+
+The launcher dashboard shows the same resolved path for the launcher form, each comparison
+variant, and each running process. See `docs/launcher_dashboard_design.md` for the full contract
+and the HTTP fields that expose it.
+
 ## Open detector comparison
 
 The included backend-switchable detector compares Autoware YOLOX with several open 2D detection

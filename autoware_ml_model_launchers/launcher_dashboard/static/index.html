@@ -502,6 +502,7 @@
               <button id="copyPreviewBtn" type="button">Copy Command</button>
             </div>
             <pre id="previewBox">Select a launcher.</pre>
+            <div id="previewModel" class="status-line"></div>
 
             <div class="subsection">
               <div class="subsection-head">
@@ -680,6 +681,7 @@
         activeValidationTab: "yolox",
         selectedLauncherId: null,
         selectedProcessId: null,
+        tlrModelPath: null,
         bagPlayer: null,
         bagBrowserEntries: [],
         bagBrowserParent: null,
@@ -694,6 +696,7 @@
       const launcherFileEl = document.getElementById("launcherFile");
       const launcherFormEl = document.getElementById("launcherForm");
       const previewBoxEl = document.getElementById("previewBox");
+      const previewModelEl = document.getElementById("previewModel");
       const processListEl = document.getElementById("processList");
       const logBoxEl = document.getElementById("logBox");
       const cameraChecksEl = document.getElementById("cameraChecks");
@@ -870,6 +873,14 @@
         return `/perception/traffic_light_recognition/${camera}/${suffix}`;
       }
 
+      function launcherById(launcherId) {
+        return state.launchers.find((launcher) => launcher.id === launcherId) || null;
+      }
+
+      function modelLine(modelPath) {
+        return modelPath ? `model: ${modelPath}` : "";
+      }
+
       function wiringRow(label, value) {
         return `<div class="wiring-row"><div class="wiring-label">${escapeHtml(
           label
@@ -1041,7 +1052,9 @@
         const packagePath = pathJoin(dataPath, packageName);
         const classifierPath = pathJoin(dataPath, classifierFolder);
         const inputImage = `/sensing/camera/${camera}/image_raw`;
-        const detectorParam = pathJoin(packagePath, "ml_package_yolox.param.yaml");
+        const tlrSpec = launcherById(state.tlrValidation.launcher_id);
+        const detectorParam =
+          state.tlrModelPath || (tlrSpec && tlrSpec.model_path) || "unresolved";
         const runtimeParam =
           "$(find-pkg-share autoware_ml_model_launchers)/config/tlr_tensorrt_yolox.param.yaml";
         const classifierState = args.enable_classification ? "enabled" : "disabled";
@@ -1269,6 +1282,7 @@
           body: JSON.stringify(payload),
         });
         previewBoxEl.textContent = result.command.join(" ");
+        previewModelEl.textContent = modelLine(result.model_path);
       }
 
       async function startLauncher() {
@@ -1324,6 +1338,8 @@
           }),
         });
         tlrPreviewBoxEl.textContent = result.command.join(" ");
+        state.tlrModelPath = result.model_path;
+        renderTlrWiring();
       }
 
       async function startTlr() {
@@ -1366,6 +1382,11 @@
                 </button>
               </div>
               <div class="codebox">${escapeHtml(process.command.join(" "))}</div>
+              ${
+                process.model_path
+                  ? `<div class="meta">${escapeHtml(modelLine(process.model_path))}</div>`
+                  : ""
+              }
               <div class="meta">outputs=${escapeHtml(JSON.stringify(process.outputs))}</div>
             </div>`
           )
@@ -1574,6 +1595,9 @@
               process.variant_id || ""
             )}</div>`
           : "";
+        const modelMeta = process.model_path
+          ? `<div class="meta">${escapeHtml(modelLine(process.model_path))}</div>`
+          : "";
         const outputMeta =
           process.outputs && Object.keys(process.outputs).length
             ? `<div class="meta">${escapeHtml(JSON.stringify(process.outputs))}</div>`
@@ -1588,6 +1612,7 @@
               <strong>${process.label}</strong>
               <div class="meta">${process.id} pid=${process.pid} log=${process.log_path}</div>
               ${groupMeta}
+              ${modelMeta}
             </div>
             <span class="pill ${stateClass}">${stateText}</span>
           </div>

@@ -75,6 +75,8 @@ Each launcher declares:
 - `args`: editable launch arguments and their type/default value
 - `isolation`: optional templates for rewriting namespace and output topic args
   during comparison runs
+- `model_path_template`: optional template(s) resolving the model file the
+  launcher loads for a given set of args
 
 Argument metadata may include `group`. The first implementation uses it mainly
 for YOLOX multi-camera controls:
@@ -113,14 +115,74 @@ value. This is useful for derived launch args such as `*_model_path`: comparison
 variants can override only `model_name` while the launch file still resolves the
 full path from the shared `data_path`, model folder, and ONNX file name.
 
+## Model Path Contract
+
+Because the launch files derive model paths from several args, no single
+registry arg identifies the model that will actually be loaded. `model_path_template`
+closes that gap: it declares how the launcher's own args compose into the model
+file, so the dashboard can show which model a form, a comparison variant, or a
+running process uses.
+
+```yaml
+launchers:
+  yolox_camera:
+    model_path_template: "{data_path}/yolox/{model_name}"
+  tlr_detect_and_classifier:
+    model_path_template:
+      - "{detector_param_path}"
+      - "{data_path}/{detector_ml_package_name}/ml_package_yolox.param.yaml"
+```
+
+Rules:
+
+- A template may be a single string or a list of candidates.
+- Every `{placeholder}` must name an arg declared by that launcher; the registry
+  refuses to load otherwise, so a renamed arg cannot silently break resolution.
+- Candidates are tried in order, and the first one whose referenced args all
+  carry a non-empty value wins. This lets a launcher list an explicit override
+  arg first (`detector_param_path`) and the derived launch-file default second.
+- A launcher without a template resolves to `null`. The dashboard shows nothing
+  rather than guessing.
+
+The resolution is applied to the merged args, so it reflects registry defaults,
+UI edits, and comparison variant overrides alike.
+
+This contract is also the supported way for other repositories to consume these
+launchers. They can read the model a launcher will load, or decide which args to
+pass to select a different one, without duplicating the launch file's path
+arithmetic:
+
+```python
+from autoware_ml_model_launchers.launcher_dashboard.registry import (
+    default_registry_path,
+    load_registry,
+)
+
+spec = load_registry(default_registry_path()).get("yolox_camera")
+spec.model_path_template          # ("{data_path}/yolox/{model_name}",)
+spec.resolve_model_path()         # /opt/autoware/mlmodels/yolox/yolox-sPlus-T4-960x960-debris.onnx
+spec.resolve_model_path({"model_name": "model_a.onnx"})
+```
+
+Consumers without a Python dependency on this package can read the same fields
+from `GET /api/launchers` (`model_path_template` and the defaults-resolved
+`model_path`) or from `POST /api/preview`, which returns the resolved
+`model_path` next to the generated command.
+
 ## API
 
 - `GET /api/launchers`
-  - Returns the registry.
+  - Returns the registry, including each launcher's `model_path_template` and
+    its defaults-resolved `model_path`.
 - `GET /api/processes`
-  - Returns current child process state.
+  - Returns current child process state, including the `model_path` each process
+    was started with.
 - `GET /api/logs?id=<process_id>&lines=200`
   - Returns a log tail.
+- `POST /api/preview`
+  - Body: `{"launcher_id": "...", "args": {...}}`
+  - Returns the generated `command` and the resolved `model_path` without
+    starting a process.
 - `POST /api/start`
   - Body: `{"launcher_id": "...", "args": {...}}`
   - Starts one registered launcher.
@@ -130,8 +192,8 @@ full path from the shared `data_path`, model folder, and ONNX file name.
 - `POST /api/preview_comparison`
   - Body: `{"run_id": "...", "camera_namespace": "camera5", "auto_isolate": true,
     "common_args": {...}, "variants": [...]}`
-  - Returns planned commands and isolated output topics without starting
-    processes.
+  - Returns planned commands, resolved model paths, and isolated output topics
+    without starting processes.
 - `POST /api/start_comparison`
   - Starts the planned comparison variants as one process group.
 - `POST /api/stop`
@@ -206,7 +268,7 @@ ros2 launch autoware_ml_model_launchers tlr_detect_and_classifier.launch.xml \
 The tab exposes common validation controls plus the detector ML package name.
 It also renders the launch wiring derived from the selected camera:
 decompression path, detector package path, runtime param file, ML package param
-file, and the output topics. More specialized topic arguments can still be
+file (resolved through `model_path_template`), and the output topics. More specialized topic arguments can still be
 edited through the generic launcher form after selecting
 `TLR Detection/Classification` in the launcher list.
 
