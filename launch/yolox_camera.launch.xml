@@ -23,23 +23,27 @@
   <arg name="output/mask" default="/perception/object_recognition/detection/$(var camera_namespace)/mask"/>
   <arg name="output/tracked_objects" default="/perception/object_recognition/detection/$(var camera_namespace)/tracked/rois"/>
 
-  <include file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
-    <arg name="namespace" value="$(var node_namespace)"/>
-    <arg name="data_path" value="$(var data_path)"/>
-    <arg name="input/image" value="$(var input/image)"/>
-    <arg name="output/objects" value="$(var output/objects)"/>
-    <arg name="output/mask" value="$(var output/mask)"/>
-    <arg name="yolox_param_path" value="$(find-pkg-share autoware_ml_model_launchers)/config/tensorrt_yolox.param.yaml"/>
-    <arg name="model_path" value="$(var model_path)"/>
-    <arg name="label_path" value="$(var label_path)"/>
-    <arg name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
-    <arg name="use_decompress" value="$(var use_decompress)"/>
-    <arg name="use_sim_time" value="$(var use_sim_time)"/>
-    <arg name="build_only" value="$(var build_only)"/>
-  </include>
+  <group>
+    <set_parameter name="use_sim_time" value="$(var use_sim_time)"/>
+
+    <include file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+      <arg name="namespace" value="$(var node_namespace)"/>
+      <arg name="data_path" value="$(var data_path)"/>
+      <arg name="input/image" value="$(var input/image)"/>
+      <arg name="output/objects" value="$(var output/objects)"/>
+      <arg name="output/mask" value="$(var output/mask)"/>
+      <arg name="yolox_param_path" value="$(find-pkg-share autoware_ml_model_launchers)/config/tensorrt_yolox.param.yaml"/>
+      <arg name="model_path" value="$(var model_path)"/>
+      <arg name="label_path" value="$(var label_path)"/>
+      <arg name="semantic_segmentation_color_map_path" value="$(var semantic_segmentation_color_map_path)"/>
+      <arg name="use_decompress" value="$(var use_decompress)"/>
+      <arg name="build_only" value="$(var build_only)"/>
+    </include>
+  </group>
 
   <group if="$(var enable_bytetrack)">
     <push-ros-namespace namespace="$(var node_namespace)"/>
+    <set_parameter name="use_sim_time" value="$(var use_sim_time)"/>
 
     <include file="$(find-pkg-share autoware_bytetrack)/launch/bytetrack.launch.xml">
       <arg name="in_image" value="$(var input/image)"/>
@@ -47,7 +51,6 @@
       <arg name="tracked_rect" value="$(var output/tracked_objects)"/>
       <arg name="enable_visualizer" value="$(var enable_bytetrack_visualizer)"/>
       <arg name="camera_index" value="_$(var camera_namespace)"/>
-      <arg name="use_sim_time" value="$(var use_sim_time)"/>
     </include>
   </group>
 </launch>
