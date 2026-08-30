@@ -3,3 +3,8 @@
 __pycache__/
 *.pyc
 *.pt
+
+# colcon artifacts, created when a build is run from this directory
+build/
+install/
+log/

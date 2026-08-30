@@ -34,6 +34,9 @@ http://127.0.0.1:8766/
   shared run ID with isolated namespaces and output topics.
 - Provide a separate rosbag player panel for bag playback, stop, log visibility,
   and service-backed pause/resume/rate controls when available.
+- Provide a separate recorder panel that captures the debug topics of running
+  launchers to mp4 and rosbag files. See
+  [topic_recording_design.md](topic_recording_design.md).
 
 Out of scope for the first implementation:
 
@@ -54,6 +57,7 @@ launcher_dashboard.ui_server
   +-- registry.py          Loads config/launcher_dashboard.yaml
   +-- process_manager.py   Builds ros2 launch commands and manages subprocesses
   +-- bag_player.py        Starts ros2 bag play and detects control services
+  +-- recording/manager.py Starts recorders for the topics of running launchers
   +-- static/index.html    Single-page UI
 ```
 
@@ -219,7 +223,9 @@ from `GET /api/launchers` (`model_path_template` and the defaults-resolved
   - Lists server-side directories and rosbag-looking entries for path selection.
 - `POST /api/bag/start`
   - Body: `{"bag_path": "...", "rate": 1.0, "loop": false, "clock": false}`
-  - Starts one managed `ros2 bag play` process.
+  - Starts one managed `ros2 bag play` process. `bag_path` also accepts
+    `@<file>` holding one bag path per line, and `bag_paths` accepts an explicit
+    list; both are played in order as a playlist.
 - `POST /api/bag/stop`
   - Stops the managed bag process.
 - `POST /api/bag/pause`
@@ -229,6 +235,11 @@ from `GET /api/launchers` (`model_path_template` and the defaults-resolved
 - `POST /api/bag/set_rate`
   - Body: `{"rate": 2.0}`
   - Calls the detected rosbag set-rate service.
+- `GET /api/record/status`, `GET /api/record/logs`
+- `POST /api/record/preview`, `/api/record/start`, `/api/record/stop`,
+  `/api/record/stop_all`, `/api/record/finalize`
+  - Recorder endpoints, documented in
+    [topic_recording_design.md](topic_recording_design.md).
 
 ## YOLOX Multi-Camera Behavior
 
@@ -364,6 +375,11 @@ The first practical increment is intentionally small:
 - stop playback
 - set the initial playback rate before start
 - show the exact command and log tail
+
+Playlist playback was added later for scenes that are stored as many short bags.
+`ros2 bag play` on Humble takes a single bag, so the manager plays the list
+sequentially and reports itself as running in the gap between two bags. Without
+that, a recorder set to stop with playback would stop at the first boundary.
 
 The path browser intentionally does not use an HTML file input. Browser file
 dialogs do not expose a reliable full filesystem path to JavaScript, and

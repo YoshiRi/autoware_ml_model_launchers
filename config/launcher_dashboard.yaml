@@ -58,6 +58,19 @@ launchers:
         output/objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/rois
         output/mask: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/mask
         output/tracked_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/object_recognition/tracked_rois
+    # topic_templates mirror the launch file arg defaults so that the recorder can
+    # resolve topics for runs started without comparison isolation.
+    # test_recording.py checks them against launch/*.launch.xml.
+    record:
+      video_args:
+        - output/mask
+      bag_args:
+        - output/objects
+        - output/tracked_objects
+      topic_templates:
+        output/objects: /perception/object_recognition/detection/{camera_namespace}/rois
+        output/mask: /perception/object_recognition/detection/{camera_namespace}/mask
+        output/tracked_objects: /perception/object_recognition/detection/{camera_namespace}/tracked/rois
 
   all_single_camera_detection:
     label: Single Camera Detection
@@ -126,6 +139,10 @@ launchers:
         type: string
         default:
         group: advanced
+      tlr_output_debug_image:
+        type: string
+        default:
+        group: advanced
     isolation:
       arg_templates:
         node_namespace: evaluation/{run_id}/{variant_id}/{camera_namespace}
@@ -136,6 +153,25 @@ launchers:
         tlr_output_detected_objects: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/yolox/objects
         tlr_output_rois: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/rois
         tlr_output_traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/traffic_signals
+        tlr_output_debug_image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/debug/image
+    record:
+      video_args:
+        - object_yolox_output_mask
+        - tlr_output_debug_image
+      bag_args:
+        - object_yolox_output_objects
+        - object_yolox_output_tracked_objects
+        - tlr_output_detected_objects
+        - tlr_output_rois
+        - tlr_output_traffic_signals
+      topic_templates:
+        object_yolox_output_objects: /perception/object_recognition/detection/{camera_namespace}/rois
+        object_yolox_output_mask: /perception/object_recognition/detection/{camera_namespace}/mask
+        object_yolox_output_tracked_objects: /perception/object_recognition/detection/{camera_namespace}/tracked/rois
+        tlr_output_detected_objects: /perception/traffic_light_recognition/{camera_namespace}/detection/yolox/objects
+        tlr_output_rois: /perception/traffic_light_recognition/{camera_namespace}/detection/rois
+        tlr_output_traffic_signals: /perception/traffic_light_recognition/{camera_namespace}/classification/traffic_signals
+        tlr_output_debug_image: /perception/traffic_light_recognition/{camera_namespace}/detection/yolox/debug/image
 
   tlr_detect_and_classifier:
     label: TLR Detection/Classification
@@ -291,6 +327,22 @@ launchers:
         output/pedestrian/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/pedestrian_traffic_signals
         output/traffic_signals: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/traffic_signals
         output/debug/image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/tlr/debug/image
+    record:
+      video_args:
+        - output/debug/image
+      bag_args:
+        - output/detected_objects
+        - output/rois
+        - output/car/traffic_signals
+        - output/pedestrian/traffic_signals
+        - output/traffic_signals
+      topic_templates:
+        output/detected_objects: /perception/traffic_light_recognition/{camera_namespace}/detection/yolox/objects
+        output/rois: /perception/traffic_light_recognition/{camera_namespace}/detection/rois
+        output/car/traffic_signals: /perception/traffic_light_recognition/{camera_namespace}/classification/car/traffic_signals
+        output/pedestrian/traffic_signals: /perception/traffic_light_recognition/{camera_namespace}/classification/pedestrian/traffic_signals
+        output/traffic_signals: /perception/traffic_light_recognition/{camera_namespace}/classification/traffic_signals
+        output/debug/image: /perception/traffic_light_recognition/{camera_namespace}/detection/yolox/debug/image
 
   open_yolo:
     label: Open YOLO
@@ -340,6 +392,17 @@ launchers:
         output/debug_image: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/debug/image
         output/debug_compressed: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/debug/image/compressed
         output/predict_ms: /evaluation/{run_id}/{variant_id}/{camera_namespace}/open_detector/latency/infer_ms
+    record:
+      video_args:
+        - output/debug_image
+      bag_args:
+        - output/detections
+        - output/predict_ms
+      topic_templates:
+        output/detections: /perception/object_recognition/detection/open_yolo/{camera_namespace}/detections
+        output/debug_image: /perception/object_recognition/detection/open_yolo/{camera_namespace}/debug/image
+        output/debug_compressed: /perception/object_recognition/detection/open_yolo/{camera_namespace}/debug/image/compressed
+        output/predict_ms: /perception/object_recognition/detection/open_yolo/{camera_namespace}/latency/predict_ms
 
   screen_camera:
     label: Screen Camera (pseudo input)
@@ -418,6 +481,25 @@ launchers:
       output/objects:
         type: string
         default: /perception/object_recognition/detection/streampetr/objects3
+
+recording:
+  # Where recorded videos, bags, and manifests are written.
+  output_root: ~/Documents/launcher_recordings
+  # Directory name per recording session, under output_root.
+  session_layout: "{session_id}"
+  # File stem per recorded topic, relative to the session directory. The stem is
+  # templated from the run metadata so recorded files stay traceable to the
+  # variant and the launch arg that produced the topic.
+  file_layout: "{run_id}/{variant_id}_{camera_namespace}_{arg_name}"
+  video:
+    # auto picks ffmpeg/libx264 when ffmpeg is on PATH, else OpenCV mp4v.
+    encoder: auto
+    crf: 23
+    # Seconds to wait for a publisher before assuming the message type.
+    wait: 60.0
+    stamp_csv: true
+  bag:
+    storage: mcap
 
 multi_yolox:
   launcher_id: yolox_camera

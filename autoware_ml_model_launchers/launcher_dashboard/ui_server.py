@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 import mimetypes
 from http import HTTPStatus
@@ -9,6 +10,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from ..recording.manager import RecordingManager
+from ..recording.spec import RecordingConfig
 from .bag_player import BagPlayerManager, browse_bag_path
 from .process_manager import ProcessManager
 from .registry import build_launch_command, default_registry_path, load_registry
@@ -21,6 +24,7 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
     server_version = "LauncherDashboard/0.1"
     manager: ProcessManager
     bag_manager: BagPlayerManager
+    recording_manager: RecordingManager
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
@@ -49,6 +53,12 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/bag/browse":
             self._handle_bag_browse(parsed.query)
             return
+        if path == "/api/record/status":
+            self._send_json(self.recording_manager.status())
+            return
+        if path == "/api/record/logs":
+            self._handle_record_logs(parsed.query)
+            return
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
@@ -70,6 +80,11 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
             "/api/bag/pause": self._handle_bag_pause,
             "/api/bag/resume": self._handle_bag_resume,
             "/api/bag/set_rate": self._handle_bag_set_rate,
+            "/api/record/preview": self._handle_record_preview,
+            "/api/record/start": self._handle_record_start,
+            "/api/record/stop": self._handle_record_stop,
+            "/api/record/stop_all": self._handle_record_stop_all,
+            "/api/record/finalize": self._handle_record_finalize,
         }
         handler = handlers.get(parsed.path)
         if handler is None:
@@ -131,6 +146,7 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
             loop=bool(payload.get("loop", False)),
             clock=bool(payload.get("clock", False)),
             start_paused=bool(payload.get("start_paused", False)),
+            bag_paths=payload.get("bag_paths"),
         )
         self._send_json({"player": player})
 
@@ -145,6 +161,35 @@ class LauncherDashboardHandler(BaseHTTPRequestHandler):
 
     def _handle_bag_set_rate(self, payload: dict[str, Any]) -> None:
         self._send_json({"player": self.bag_manager.set_rate(payload.get("rate", 1.0))})
+
+    def _handle_record_preview(self, payload: dict[str, Any]) -> None:
+        self._send_json(self.recording_manager.preview(payload, self.manager.list_processes()))
+
+    def _handle_record_start(self, payload: dict[str, Any]) -> None:
+        self._send_json(self.recording_manager.start(payload, self.manager.list_processes()))
+
+    def _handle_record_stop(self, payload: dict[str, Any]) -> None:
+        self._send_json({"recording": self.recording_manager.stop(str(payload["id"]))})
+
+    def _handle_record_stop_all(self, _payload: dict[str, Any]) -> None:
+        self._send_json({"recordings": self.recording_manager.stop_all()})
+
+    def _handle_record_finalize(self, payload: dict[str, Any]) -> None:
+        self._send_json(
+            self.recording_manager.finalize(
+                processes=self.manager.list_processes(),
+                bag=self.bag_manager.status(),
+                clear=bool(payload.get("clear", True)),
+            )
+        )
+
+    def _handle_record_logs(self, query: str) -> None:
+        params = parse_qs(query)
+        recording_id = params.get("id", [""])[0]
+        lines = int(params.get("lines", ["200"])[0])
+        self._send_json(
+            {"id": recording_id, "text": self.recording_manager.tail_log(recording_id, lines)}
+        )
 
     def _handle_logs(self, query: str) -> None:
         params = parse_qs(query)
@@ -202,21 +247,41 @@ def main() -> None:
         type=Path,
         default=Path("/tmp/autoware_ml_model_launchers/launcher_dashboard"),
     )
+    parser.add_argument(
+        "--recording-root",
+        type=Path,
+        default=None,
+        help="override the recording output_root from the registry",
+    )
     args = parser.parse_args()
 
     registry_path = args.registry or default_registry_path()
     registry = load_registry(registry_path)
+    bag_manager = BagPlayerManager(args.log_dir)
+    recording_config = RecordingConfig.from_registry(registry)
+    if args.recording_root is not None:
+        recording_config = replace(recording_config, output_root=args.recording_root.expanduser())
+
     LauncherDashboardHandler.manager = ProcessManager(registry, args.log_dir)
-    LauncherDashboardHandler.bag_manager = BagPlayerManager(args.log_dir)
+    LauncherDashboardHandler.bag_manager = bag_manager
+    LauncherDashboardHandler.recording_manager = RecordingManager(
+        config=recording_config,
+        registry=registry,
+        bag_running=bag_manager.is_running,
+    )
 
     server = ThreadingHTTPServer((args.host, args.port), LauncherDashboardHandler)
     print(f"Serving launcher dashboard at http://{args.host}:{args.port}/")
     print(f"Registry: {registry_path}")
+    print(f"Recordings: {recording_config.output_root}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        # Recorders first: they must finalize their files before the publishers
+        # and the bag player they were capturing go away.
+        LauncherDashboardHandler.recording_manager.stop_all()
         LauncherDashboardHandler.manager.stop_all()
         LauncherDashboardHandler.bag_manager.stop()
         server.server_close()

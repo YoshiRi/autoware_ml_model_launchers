@@ -1,0 +1,83 @@
+# Config for `ros2 run autoware_ml_model_launchers record_session`.
+#
+#   source ~/autoware/install/setup.bash
+#   ros2 run autoware_ml_model_launchers record_session record_session.example.yaml --dry-run
+#   ros2 run autoware_ml_model_launchers record_session record_session.example.yaml
+#
+# Each session launches the models, waits until the recorded topics are
+# advertised, starts the recorders, plays the bags, and writes manifest.json.
+
+defaults:
+  output_root: ~/Documents/launcher_recordings
+  camera_namespace: camera5
+  rate: 0.2                # ros2 bag play --rate
+  clock: true              # publish /clock, matches use_sim_time:=true
+  startup_timeout: 900     # a model without a cached TensorRT engine takes minutes
+  settle_sec: 3.0
+
+sessions:
+  # One scene stored as many one-minute bags: the recorders stay up across the
+  # whole playlist, so a single continuous video comes out.
+  - id: odaiba_tlr_phase2
+    bags: "@~/Downloads/rapis_source_only/odaiba_rinkai_20260511-20260513/play_order_phase2.txt"
+    comparison:
+      run_id: tlr_phase2
+      common_args:
+        use_decompress: true
+        use_sim_time: true
+      variants:
+        - id: tlr_960_20260629
+          label: TLR 960 20260629
+          launcher_id: tlr_detect_and_classifier
+          args:
+            enable_classification: false
+            data_path: /home/yoshiri/autoware_data/TLRtest
+        - id: tlr_1280_20260703
+          label: TLR 1280 20260703
+          launcher_id: tlr_detect_and_classifier
+          args:
+            enable_classification: false
+            data_path: /home/yoshiri/autoware_data/TLRtest
+            detector_param_path: /home/yoshiri/autoware_data/TLRtest/traffic_light_detector/ml_package_yolox.1280x1280_20260703_best.param.yaml
+    record:
+      from_group: true       # record every topic the variants declare in `record:`
+      include_sinks: [video, bag]
+
+  # A single launcher and a single bag; the recorder falls back to the launch
+  # file default topics because nothing is isolated here.
+  - id: odaiba_yolox
+    bags: ~/Documents/cfa23601-97c4-4d47-a37e-edfc7e080d8c_2026-08-03-15-30-16_p0900_12.mcap
+    rate: 0.5
+    launcher:
+      launcher_id: yolox_camera
+      args:
+        camera_namespace: camera5
+        enable_bytetrack: true
+        model_name: yolox-sPlus-T4-960x960-debris.onnx
+    record:
+      include_sinks: [video]
+      video:
+        crf: 20
+
+  # Batch: the models are launched once and every clip is played in order, so a
+  # cold TensorRT engine build is paid once instead of per bag. Each clip is a
+  # (bag, output name) pair and gets its own subdirectory under the session.
+  - id: tlr_regression_batch
+    launcher:
+      launcher_id: tlr_detect_and_classifier
+      args:
+        camera_namespace: camera5
+        enable_classification: false
+    record:
+      include_sinks: [video]
+    # Optional: put the clip name in the file stem instead of a subdirectory,
+    # which gives scene_a_output_debug_image.mp4 next to scene_b_...mp4.
+    # file_layout: "{clip}_{arg_name}"
+    clips:
+      - name: scene_a_night
+        bag: ~/Documents/bags/scene_a.mcap
+      - name: scene_b_rain
+        bag: ~/Documents/bags/scene_b.mcap
+        rate: 0.5                    # per-clip playback override
+      - name: scene_c_phase2
+        bag: "@~/Documents/bags/scene_c_play_order.txt"   # a clip may be a playlist

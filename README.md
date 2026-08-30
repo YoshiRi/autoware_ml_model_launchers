@@ -196,6 +196,64 @@ When viewing the compressed source directly, select
 `/sensing/camera/camera5/image_raw/compressed`. Replace `camera5` in every topic when another
 camera namespace is used. Save the configured workspace as a Lichtblick layout for reuse.
 
+## Recording debug topics
+
+The usual validation loop is: play a rosbag, launch TLR or YOLOX, and keep the debug output. That
+last step is built in. Image topics become mp4 files (h264 through ffmpeg when available, so they
+play in a browser), every other topic goes into one rosbag, and each session directory gets a
+`manifest.json` listing the launch commands, the recorded files, frame counts, and measured fps.
+
+Record explicit topics from a terminal:
+
+```bash
+ros2 run autoware_ml_model_launchers record_topics \
+  -t /perception/traffic_light_recognition/camera5/detection/yolox/debug/image -n tlr_debug \
+  -b /perception/traffic_light_recognition/camera5/classification/traffic_signals
+```
+
+Stop with Ctrl-C; the files are finalized and the manifest is written. Add `--dry-run` to print the
+commands only, `-o` to override the output root, and `--duration` for a fixed-length capture.
+
+In the launcher dashboard (`ros2 run autoware_ml_model_launchers launcher_dashboard_ui`), the
+`Recorder` panel does the same thing without naming topics: pick a comparison group as the source,
+or press `Record Group` on a running group, and the topics come from that launcher's `record:`
+contract in `config/launcher_dashboard.yaml`. Leave `stop when playback ends` checked to have the
+recorders stop themselves a few seconds after the bag finishes.
+
+To run a whole matrix unattended, describe it once and let `record_session` launch, wait for the
+topics, record, play, and clean up per session:
+
+```bash
+ros2 run autoware_ml_model_launchers record_session samples/record_session.example.yaml --dry-run
+ros2 run autoware_ml_model_launchers record_session samples/record_session.example.yaml
+```
+
+To compare several bags against the same models, list them as `clips`. The models are launched
+once and each clip is played in order, so a cold TensorRT engine build is paid once instead of per
+bag, and every clip gets its own output name:
+
+```yaml
+  - id: tlr_regression_batch
+    launcher:
+      launcher_id: tlr_detect_and_classifier
+      args: {camera_namespace: camera5, enable_classification: false}
+    clips:
+      - name: scene_a_night
+        bag: ~/bags/scene_a.mcap
+      - name: scene_b_rain
+        bag: ~/bags/scene_b.mcap
+        rate: 0.5
+```
+
+A scene split into many short bags can be played as one playlist by passing a file with one bag
+path per line, both in the session config and in the dashboard's bag path field:
+
+```text
+@/path/to/play_order.txt
+```
+
+Design notes and the full API are in [docs/topic_recording_design.md](docs/topic_recording_design.md).
+
 ## Individual launchers
 
 Run generic YOLOX and ByteTrack only:
